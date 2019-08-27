@@ -16,7 +16,6 @@ import java.util.Map;
 
 public class DifferentiatorBolt extends BaseWindowedBolt {
 
-	private double derivative;
 	private OutputCollector collector;
 
 	@Override
@@ -29,11 +28,10 @@ public class DifferentiatorBolt extends BaseWindowedBolt {
 	public void execute(TupleWindow inputWindow) {
 
 		List<Tuple> tuples = inputWindow.get();
-		Double delta_t = tuples.get(tuples.size() - 1).getDoubleByField("dt_diff");
 		double B = 0, C = 0, D = 0, E = 0, F = 0;
-
 		List<Double> timestamps = new ArrayList<Double>();
-		Double t0 = System.currentTimeMillis() - delta_t;
+        Double delta_t = tuples.get(tuples.size() - 1).getDoubleByField("dt_diff");
+		Double t0 = System.currentTimeMillis() - delta_t * 1000;
 		for (Tuple tuple : tuples) {
 			Double t = tuple.getDoubleByField("timestamp");
 			if (t > t0) {
@@ -41,7 +39,6 @@ public class DifferentiatorBolt extends BaseWindowedBolt {
 			}
 		}
 		double t_min = Collections.min(timestamps);
-
 		for (Tuple tuple : tuples) {
 			double t = (tuple.getDoubleByField("timestamp") - t_min) / 1000;
 			double y = tuple.getDoubleByField("value");

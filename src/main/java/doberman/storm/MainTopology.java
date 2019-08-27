@@ -33,7 +33,7 @@ public class MainTopology {
 
 		Config config = new Config();
 		config.setDebug(false);
-		config.setMessageTimeoutSecs(60);
+		config.setMessageTimeoutSecs(600);
 		config.setNumWorkers(1);
 
 		KafkaSpout kafkaSpout = new KafkaSpout<>(getKafkaSpoutConfig(bootstrap_servers));
@@ -45,10 +45,10 @@ public class MainTopology {
 		// PID alarm
 		tp.setBolt("PropBolt", new ProportionalBolt()).shuffleGrouping("ConfigBolt");
 		tp.setBolt("IntBolt",
-				new IntegralBolt().withWindow(new Duration(5, TimeUnit.MINUTES), Count.of(1)), 20)
+				new IntegralBolt().withWindow(Count.of(3), Count.of(1)), 20)
 				.fieldsGrouping("ConfigBolt", new Fields("topic"));
 		tp.setBolt("DiffBolt",
-				new DifferentiatorBolt().withWindow(new Duration(5, TimeUnit.MINUTES), Count.of(1)), 20)
+				new DifferentiatorBolt().withWindow(Count.of(3), Count.of(1)), 20)
 				.fieldsGrouping("ConfigBolt", new Fields("topic"));
 
 		JoinBolt joinPid = new JoinBolt("ConfigBolt", "key").join("IntBolt", "key", "ConfigBolt")
@@ -63,11 +63,14 @@ public class MainTopology {
 		tp.setBolt("PidBolt", new PidBolt()).shuffleGrouping("JoinPid");
 
 		// send data to influxDB
-		tp.setBolt("ReadingToStorage", new InfluxBolt()).shuffleGrouping("KafkaSpout");
+		tp.setBolt("InfluxBolt", new InfluxBolt()).shuffleGrouping("ConfigBolt");
+        /*
+        tp.setBolt("ReadingToStorage", new InfluxBolt()).shuffleGrouping("KafkaSpout");
 		tp.setBolt("PropToStorage", new InfluxBolt()).shuffleGrouping("PropBolt");
 		tp.setBolt("IntToStorage", new InfluxBolt()).shuffleGrouping("IntBolt");
 		tp.setBolt("DiffToStorage", new InfluxBolt()).shuffleGrouping("DiffBolt");
 		tp.setBolt("PidToStorage", new InfluxBolt()).shuffleGrouping("PidBolt");
+        */
 
 		// Submit topology to production cluster
 		try {

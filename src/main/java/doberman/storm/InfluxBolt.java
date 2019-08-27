@@ -36,12 +36,10 @@ public class InfluxBolt extends BaseRichBolt {
 		String[] parts = topic.split("__");
 		String sensor_name = parts[0];
 		String reading = parts[1];
-		String type = input.getStringByField("type");
-
-		// Quantity (=measurement) should be imported from MongoDB in the future
-		Point point = Point.measurement("test_quantity")
+        String quantity = input.getStringByField("quantity");
+		Point point = Point.measurement(quantity)
 				.time(input.getDoubleByField("timestamp").longValue(), TimeUnit.MILLISECONDS)
-				.tag("sensor_name", sensor_name).tag("type", type).addField(reading, input.getDouble(2))
+				.tag("sensor_name", sensor_name).addField(reading, input.getDouble(2))
 				.build();
 		influxDB.write(point);
 		// System.out.println("WROTE POINT TO DATABASE" + sensor_name + " " + type + " @

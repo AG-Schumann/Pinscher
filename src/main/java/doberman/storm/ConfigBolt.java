@@ -45,12 +45,13 @@ public class ConfigBolt extends BaseRichBolt {
 	public void execute(Tuple input) {
 
 		Document doc = collection.find(eq("key", input.getStringByField("topic"))).first();
+        String quantity =(String)doc.get("quantity");
 		List<Document> alarms = (List<Document>) doc.get("alarms");
 		String key = input.getStringByField("topic") + "_" + input.getDoubleByField("timestamp");
 		for (Document alarm : alarms) {
 			if (alarm.getString("type").equals("pid")) {
 				collector.emit(new Values(input.getString(0), input.getDouble(1), input.getDouble(2),
-						alarm.getDouble("a"), alarm.getDouble("b"), alarm.getDouble("c"),
+                        quantity,alarm.getDouble("a"), alarm.getDouble("b"), alarm.getDouble("c"),
 						alarm.getDouble("setpoint"), alarm.getDouble("delta_t_integral"),
 						alarm.getDouble("delta_t_differential"), alarm.getDouble("lower_threshold"),
 						alarm.getDouble("upper_threshold"), key));
@@ -61,8 +62,8 @@ public class ConfigBolt extends BaseRichBolt {
 
 	@Override
 	public void declareOutputFields(OutputFieldsDeclarer declarer) {
-		declarer.declare(new Fields("topic", "timestamp", "value", "a", "b", "c", "setpoint", "dt_int",
-				"dt_diff", "lower_threshold", "upper_threshold", "key"));
+		declarer.declare(new Fields("topic", "timestamp", "value", "quantity",  "a", "b", "c", "setpoint",
+                    "dt_int","dt_diff", "lower_threshold", "upper_threshold", "key"));
 
 	}
 }
