@@ -32,7 +32,14 @@ public class InfluxBolt extends BaseRichBolt {
 	@Override
 	public void execute(Tuple input) {
 		String source = input.getSourceComponent();
-		System.out.println(source);
+		String type = "";
+        if(source.equals("ConfigBolt")){
+            type = "reading";
+        } else if (source.equals("PidBolt")){
+            type = "pid";
+        } else if (source.equals("TimeSinceBolt")){
+            type = "timesince";
+        }
 		String topic = input.getStringByField("topic");
 		String[] parts = topic.split("__");
 		String sensor_name = parts[0];
@@ -40,7 +47,7 @@ public class InfluxBolt extends BaseRichBolt {
         String quantity = input.getStringByField("quantity");
 		Point point = Point.measurement(quantity)
 				.time(input.getDoubleByField("timestamp").longValue(), TimeUnit.MILLISECONDS)
-				.tag("sensor_name", sensor_name).addField(reading, input.getDouble(2))
+				.tag("sensor_name", sensor_name).tag("type", type).addField(reading, input.getDouble(2))
 				.build();
 		influxDB.write(point);
 		// System.out.println("WROTE POINT TO DATABASE" + sensor_name + " " + type + " @

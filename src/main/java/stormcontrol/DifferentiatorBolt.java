@@ -32,16 +32,17 @@ public class DifferentiatorBolt extends BaseWindowedBolt {
 		List<Double> timestamps = new ArrayList<Double>();
         Double delta_t = tuples.get(tuples.size() - 1).getDoubleByField("dt_diff");
 		Double t0 = System.currentTimeMillis() - delta_t * 1000;
-		for (Tuple tuple : tuples) {
+		List<Double> values = new ArrayList<Double>();
+        for (Tuple tuple : tuples) {
 			Double t = tuple.getDoubleByField("timestamp");
-			if (t > t0) {
-				timestamps.add(tuple.getDouble(1));
+			if (t >= t0) {
+				timestamps.add(t);
+                values.add(tuple.getDoubleByField("value"));
 			}
 		}
-		double t_min = Collections.min(timestamps);
-		for (Tuple tuple : tuples) {
-			double t = (tuple.getDoubleByField("timestamp") - t_min) / 1000;
-			double y = tuple.getDoubleByField("value");
+		for (int i = 0; i < timestamps.size() - 1; ++i) {
+			double t = (timestamps.get(i) - timestamps.get(0)) / 1000;
+			double y = values.get(i);
 			B += t * t;
 			C += 1;
 			D += t * y;

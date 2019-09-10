@@ -44,13 +44,17 @@ public class TimeSinceConfigBolt extends BaseRichBolt {
 	@Override
 	public void execute(Tuple input) {
 		Document doc = collection.find(eq("key", input.getStringByField("topic"))).first();
-		List<Document> alarms = (List<Document>) doc.get("alarms");
-		String key = input.getStringByField("topic") + "_" + input.getDoubleByField("timestamp");
+		String quantity =(String)doc.get("quantity");
+        List<Document> alarms = (List<Document>) doc.get("alarms");
 		for (Document alarm : alarms) {
 			if (alarm.getString("type").equals("time_since")) {
-				collector.emit(new Values(input.getString(0), input.getDouble(1), input.getDouble(2),
-						alarm.getDouble("lower_threshold"), alarm.getDouble("upper_threshold"),
-						alarm.getDouble("max_duration"), key));
+				collector.emit(new Values(input.getStringByField("topic"),
+                            input.getDoubleByField("timestamp"),
+                            input.getDoubleByField("value"),
+                            quantity,
+                            alarm.getDouble("lower_threshold"),
+                            alarm.getDouble("upper_threshold"),
+                            alarm.getDouble("max_duration")));
 			}
 		}
 		collector.ack(input);
@@ -59,9 +63,7 @@ public class TimeSinceConfigBolt extends BaseRichBolt {
 
 	@Override
 	public void declareOutputFields(OutputFieldsDeclarer declarer) {
-		declarer.declare(new Fields("topic", "timestamp", "value", "lower_threshold", "upper_threshold",
-				"max_duration"));
-
+		declarer.declare(new Fields("topic", "timestamp", "value", "quantity", "lower_threshold",
+                    "upper_threshold", "max_duration"));
 	}
-
 }

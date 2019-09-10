@@ -20,11 +20,12 @@ public class TimeSinceBolt extends BaseWindowedBolt {
 	@Override
 	public void prepare(Map<String, Object> topoConf, TopologyContext context, OutputCollector collector) {
 		this.collector = collector;
-
 	}
+
 	@Override
 	public void execute(TupleWindow inputWindow) {
 		List<Tuple> tuples = inputWindow.get();
+        double time_since = 0.0;
 		List<Double> timestamps = new ArrayList<Double>();
 		List<Double> values = new ArrayList<Double>();
 		double lower_threshold = tuples.get(tuples.size() - 1).getDoubleByField("lower_threshold");
@@ -34,19 +35,22 @@ public class TimeSinceBolt extends BaseWindowedBolt {
 			values.add(tuple.getDoubleByField("value"));
 		}
 		int last_in_threshold = 0;
-		for (int i = 0 ; i < tuples.size(); i++) {
-			if (values.get(i) > lower_threshold && values.get(i) < upper_threshold) {
+		for (int i = 0 ; i < values.size(); ++i) {
+			if (values.get(i) >= lower_threshold && values.get(i) <= upper_threshold) {
 				last_in_threshold = i;
 			}
-		double time_since = System.currentTimeMillis() - timestamps.get(last_in_threshold);
+           
+        }
+        System.out.println();
+		time_since = (System.currentTimeMillis() - timestamps.get(last_in_threshold))/1000;
 		collector.emit(new Values(tuples.get(0).getStringByField("topic"),
-				tuples.get(tuples.size() - 1).getDoubleByField("timestamp"), time_since, "time_since"));
-		}
-		
+				tuples.get(tuples.size() - 1).getDoubleByField("timestamp"),
+                time_since,
+                tuples.get(0).getStringByField("quantity")));
 	}
 	@Override
 	public void declareOutputFields(OutputFieldsDeclarer declarer) {
-		declarer.declare(new Fields("topic", "timestamp", "value", "type"));
+		declarer.declare(new Fields("topic", "timestamp","timesince", "quantity"));
 
 	}
 	

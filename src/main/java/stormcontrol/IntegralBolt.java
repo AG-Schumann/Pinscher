@@ -18,8 +18,7 @@ public class IntegralBolt extends BaseWindowedBolt {
 	private OutputCollector collector;
 
 	@Override
-	public void prepare(Map<String, Object> topoConf, TopologyContext context,
-            OutputCollector collector) {
+	public void prepare(Map<String, Object> topoConf, TopologyContext context, OutputCollector collector) {
 		this.collector = collector;
 	}
 
@@ -27,7 +26,6 @@ public class IntegralBolt extends BaseWindowedBolt {
 	public void execute(TupleWindow inputWindow) {
 
 		List<Tuple> tuples = inputWindow.get();
-        System.out.println("TUPLES: " + tuples);
 		Double setpoint = tuples.get(tuples.size() - 1).getDoubleByField("setpoint");
         double integral = 0.0;
 		// create lists of timestamps and values in window from now to now - delta_t
@@ -42,17 +40,14 @@ public class IntegralBolt extends BaseWindowedBolt {
 				values.add(tuple.getDoubleByField("value") - setpoint);
 			}
 		}
-        System.out.println("TIMESTAMPS: " + timestamps);
-
 		// integral from t0 to first data point in window
 		integral += (timestamps.get(0) - t0 / 1000) * values.get(0);
 
 		// integral over the data points (trapezoidal rule)
-		for (int i = 0; i < tuples.size() - 1; ++i) {
+		for (int i = 0; i < timestamps.size() - 1; ++i) {
 			integral += 0.5 * (timestamps.get(i + 1) - timestamps.get(i))
 					* (values.get(i + 1) + values.get(i));
 		}
-		System.out.println("INTEGRAL: " + integral);
         collector.emit(new Values(tuples.get(0).getStringByField("topic"),
 				tuples.get(tuples.size() - 1).getDoubleByField("timestamp"), integral,
 				"integral", tuples.get(tuples.size() - 1).getStringByField("key")));

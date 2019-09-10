@@ -23,20 +23,21 @@ public class PidBolt extends BaseRichBolt {
 	@Override
 	public void execute(Tuple input) {
 
-		Double A = input.getDouble(2);
-		Double B = input.getDouble(3);
-		Double C = input.getDouble(4);
-		Double integral = input.getDouble(7);
-		Double proportional = input.getDouble(8);
-		Double derivative = input.getDouble(9);
+		Double A = input.getDoubleByField("a");
+		Double B = input.getDoubleByField("b");
+		Double C = input.getDoubleByField("c");
+		Double integral = input.getDoubleByField("integral");
+		Double proportional = input.getDoubleByField("proportional");
+		Double derivative = input.getDoubleByField("derivative");
 		Double pid = A * integral + B * proportional + C * derivative;
-		collector.emit(new Values(input.getString(0), input.getDouble(1), pid, "pid"));
+		collector.emit(new Values(input.getString(0), input.getDouble(1), pid,
+                    input.getStringByField("quantity")));
 		collector.ack(input);
 	}
 
 	@Override
 	public void declareOutputFields(OutputFieldsDeclarer declarer) {
-		declarer.declare(new Fields("topic", "timestamp", "pid", "type"));
+		declarer.declare(new Fields("topic", "timestamp", "pid", "quantity"));
 
 	}
 }
