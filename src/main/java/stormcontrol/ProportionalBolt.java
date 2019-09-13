@@ -12,6 +12,10 @@ import java.util.Map;
 
 public class ProportionalBolt extends BaseRichBolt {
 
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
 	private OutputCollector collector;
 
 	@Override

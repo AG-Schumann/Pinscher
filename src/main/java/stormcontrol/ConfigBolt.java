@@ -22,6 +22,10 @@ import static com.mongodb.client.model.Filters.eq;
 
 public class ConfigBolt extends BaseRichBolt {
 
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
 	private OutputCollector collector;
 	private MongoCollection<Document> collection;
 
@@ -44,14 +48,14 @@ public class ConfigBolt extends BaseRichBolt {
 	@Override
 	public void execute(Tuple input) {
 
-		Document doc = collection.find(eq("key", input.getStringByField("topic"))).first();
-        String quantity =(String)doc.get("quantity");
+		Document doc = collection.find(eq("key", input.getStringByField("reading_name"))).first();
 		List<Document> alarms = (List<Document>) doc.get("alarms");
-		String key = input.getStringByField("topic") + "_" + input.getDoubleByField("timestamp");
+		String key = input.getStringByField("reading_name") + "_" + input.getDoubleByField("timestamp");
 		for (Document alarm : alarms) {
 			if (alarm.getString("type").equals("pid")) {
-				collector.emit(new Values(input.getString(0), input.getDouble(1), input.getDouble(2),
-                        quantity,alarm.getDouble("a"), alarm.getDouble("b"), alarm.getDouble("c"),
+				collector.emit(new Values(input.getStringByField("type"), input.getDoubleByField("timestamp"),
+						input.getStringByField("reading_name"), input.getDoubleByField("value"),
+                        alarm.getDouble("a"), alarm.getDouble("b"), alarm.getDouble("c"),
 						alarm.getDouble("setpoint"), alarm.getDouble("delta_t_integral"),
 						alarm.getDouble("delta_t_differential"), alarm.getDouble("lower_threshold"),
 						alarm.getDouble("upper_threshold"), key));
@@ -62,7 +66,7 @@ public class ConfigBolt extends BaseRichBolt {
 
 	@Override
 	public void declareOutputFields(OutputFieldsDeclarer declarer) {
-		declarer.declare(new Fields("topic", "timestamp", "value", "quantity",  "a", "b", "c", "setpoint",
+		declarer.declare(new Fields("type", "timestamp", "value", "quantity",  "a", "b", "c", "setpoint",
                     "dt_int","dt_diff", "lower_threshold", "upper_threshold", "key"));
 
 	}

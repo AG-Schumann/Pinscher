@@ -15,6 +15,10 @@ import java.util.Map;
 
 public class IntegralBolt extends BaseWindowedBolt {
 
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
 	private OutputCollector collector;
 
 	@Override

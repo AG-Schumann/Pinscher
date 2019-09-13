@@ -10,12 +10,15 @@ import org.apache.storm.tuple.Values;
 import org.apache.storm.windowing.TupleWindow;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
 public class DifferentiatorBolt extends BaseWindowedBolt {
 
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
 	private OutputCollector collector;
 
 	@Override

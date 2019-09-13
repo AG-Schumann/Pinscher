@@ -22,6 +22,10 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 
 public class TimeSinceConfigBolt extends BaseRichBolt {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
 	private OutputCollector collector;
 	private MongoCollection<Document> collection;
 

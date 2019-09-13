@@ -13,7 +13,11 @@ import java.util.Map;
 
 public class DebugBolt extends BaseRichBolt {
 
-    private OutputCollector collector;
+    /**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+	private OutputCollector collector;
 
     @Override
     public void prepare(Map<String, Object> map, TopologyContext topologyContext,

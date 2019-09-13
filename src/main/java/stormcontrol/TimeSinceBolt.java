@@ -15,6 +15,10 @@ import org.apache.storm.windowing.TupleWindow;
 
 public class TimeSinceBolt extends BaseWindowedBolt {
 	
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
 	private OutputCollector collector;
 
 	@Override

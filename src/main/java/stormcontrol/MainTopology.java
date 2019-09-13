@@ -3,6 +3,7 @@ package stormcontrol;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.storm.Config;
 import org.apache.storm.bolt.JoinBolt;
+import org.apache.storm.kafka.spout.ByTopicRecordTranslator;
 import org.apache.storm.kafka.spout.KafkaSpout;
 import org.apache.storm.kafka.spout.KafkaSpoutConfig;
 import org.apache.storm.kafka.spout.KafkaSpoutRetryExponentialBackoff;
@@ -16,21 +17,17 @@ import org.apache.storm.tuple.Values;
 import org.apache.storm.StormSubmitter;
 import static org.apache.storm.kafka.spout.FirstPollOffsetStrategy.LATEST;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
-
 public class MainTopology {
 
-	//private static final Pattern TOPIC_WILDCARD_PATTERN = Pattern.compile("\\b(?!__)\\w+__\\w+\\b");
-	private static final Pattern TOPIC_WILDCARD_PATTERN = Pattern.compile("\\bTestSensor__\\w+\\b");
+	private static final String[] topics = { "Voltage", "Pressure", "Temperature", "Other" };
+
 	public static void main(String[] args) {
 
 		String bootstrap_servers = "localhost:9092";
-        int window_length = 600;
+		int window_length = 600;
 		Config config = new Config();
 		config.setMessageTimeoutSecs(666);
 		config.setNumWorkers(1);
@@ -39,49 +36,36 @@ public class MainTopology {
 
 		TopologyBuilder tp = new TopologyBuilder();
 		tp.setSpout("KafkaSpout", kafkaSpout);
-		tp.setBolt("ConfigBolt", new ConfigBolt()).shuffleGrouping("KafkaSpout");
+		tp.setBolt("Buffer", new Buffer()).fieldsGrouping("KafkaSpout", new Fields("type"));
+		tp.setBolt("ConfigBolt", new ConfigBolt()).shuffleGrouping("Buffer");
 
 		// PID alarm
 		tp.setBolt("PropBolt", new ProportionalBolt()).shuffleGrouping("ConfigBolt");
-		tp.setBolt("IntBolt",
-				new IntegralBolt().withWindow(new Duration(window_length, TimeUnit.SECONDS),
-                    Count.of(1)), 5)
-				.fieldsGrouping("ConfigBolt", new Fields("topic"));
-		tp.setBolt("DiffBolt",
-				new DifferentiatorBolt().withWindow(new Duration(window_length, TimeUnit.SECONDS),
-                    Count.of(1)), 5)
-				.fieldsGrouping("ConfigBolt", new Fields("topic"));
+		tp.setBolt("IntBolt", new IntegralBolt()
+			.withWindow(new Duration(window_length, TimeUnit.SECONDS), Count.of(1)),5)
+		.fieldsGrouping("ConfigBolt", new Fields("topic"));
+		tp.setBolt("DiffBolt", new DifferentiatorBolt()
+			.withWindow(new Duration(window_length, TimeUnit.SECONDS), Count.of(1)), 5)
+		.fieldsGrouping("ConfigBolt", new Fields("topic"));
 
 		JoinBolt joinPid = new JoinBolt("ConfigBolt", "key").join("IntBolt", "key", "ConfigBolt")
 				.join("DiffBolt", "key", "IntBolt").join("PropBolt", "key", "DiffBolt")
 				.select("topic, ConfigBolt:timestamp, a, b, c, lower_threshold, upper_threshold, quantity, integral, proportional, derivative")
 				.withTumblingWindow(new BaseWindowedBolt.Duration(5, TimeUnit.SECONDS));
 		tp.setBolt("JoinPid", joinPid, 5).fieldsGrouping("ConfigBolt", new Fields("key"))
-				.fieldsGrouping("IntBolt", new Fields("key"))
-				.fieldsGrouping("PropBolt", new Fields("key"))
+				.fieldsGrouping("IntBolt", new Fields("key")).fieldsGrouping("PropBolt", new Fields("key"))
 				.fieldsGrouping("DiffBolt", new Fields("key"));
 
 		tp.setBolt("PidBolt", new PidBolt()).shuffleGrouping("JoinPid");
-        
-        //Time Since alarm
-        tp.setBolt("TimeSinceConfigBolt", new TimeSinceConfigBolt()).shuffleGrouping("KafkaSpout");
-        tp.setBolt("TimeSinceBolt",
-                new TimeSinceBolt().withWindow(new Duration(window_length, TimeUnit.SECONDS),
-                    Count.of(1)), 10)
-                .fieldsGrouping("TimeSinceConfigBolt", new Fields("topic"));
-		
-        // send data to influxDB
-		tp.setBolt("InfluxBolt", new InfluxBolt()).shuffleGrouping("ConfigBolt");
-        
-        /*
-        tp.setBolt("ReadingToStorage", new InfluxBolt()).shuffleGrouping("KafkaSpout");
-		tp.setBolt("PropToStorage", new InfluxBolt()).shuffleGrouping("PropBolt");
-		tp.setBolt("IntToStorage", new InfluxBolt()).shuffleGrouping("IntBolt");
-		tp.setBolt("DiffToStorage", new InfluxBolt()).shuffleGrouping("DiffBolt");
-		*/
 
-        tp.setBolt("PidToStorage", new InfluxBolt()).shuffleGrouping("PidBolt");
-        tp.setBolt("TimeSinceToStorage", new InfluxBolt()).shuffleGrouping("TimeSinceBolt");
+		// Time Since alarm
+		tp.setBolt("TimeSinceConfigBolt", new TimeSinceConfigBolt()).shuffleGrouping("KafkaSpout");
+		tp.setBolt("TimeSinceBolt",
+				new TimeSinceBolt().withWindow(new Duration(window_length, TimeUnit.SECONDS), Count.of(1)), 10)
+				.fieldsGrouping("TimeSinceConfigBolt", new Fields("topic"));
+
+		//tp.setBolt("PidToStorage", new InfluxBolt()).shuffleGrouping("PidBolt");
+		//tp.setBolt("TimeSinceToStorage", new InfluxBolt()).shuffleGrouping("TimeSinceBolt");
 
 		// Submit topology to production cluster
 		try {
@@ -92,20 +76,27 @@ public class MainTopology {
 	}
 
 	private static KafkaSpoutConfig<String, String> getKafkaSpoutConfig(String bootstrapServers) {
-		return KafkaSpoutConfig.builder(bootstrapServers, TOPIC_WILDCARD_PATTERN)
-				.setProp(ConsumerConfig.GROUP_ID_CONFIG, "kafkaSpoutTestGroup")
-				.setRetry(getRetryService())
-				.setRecordTranslator(
-						(r) -> new Values(r.topic(), (double) r.timestamp(),
-								Double.parseDouble(r.value()), "reading"),
-						new Fields("topic", "timestamp", "value", "type"))
-				.setOffsetCommitPeriodMs(10_000).setFirstPollOffsetStrategy(LATEST)
-				.setMaxUncommittedOffsets(20).build();
+		ByTopicRecordTranslator<String, String> trans = new ByTopicRecordTranslator<>(
+				(r) -> new Values(r.topic(), (double) r.timestamp(), decode(r.value())),
+				new Fields("type", "timestamp", "reading_name", "value"));
+		trans.forTopic("Sysmon", (r) -> new Values(r.topic(), (double) r.timestamp(), decode(r.value())),
+				new Fields("type", "timestamp", "host", "reading_name", "value"));
+
+		return KafkaSpoutConfig.builder(bootstrapServers, topics)
+				// .setProp(ConsumerConfig.GROUP_ID_CONFIG, "kafkaSpoutTestGroup")
+				.setRetry(getRetryService()).setRecordTranslator(trans).setOffsetCommitPeriodMs(10_000)
+				.setFirstPollOffsetStrategy(LATEST).setMaxUncommittedOffsets(20).build();
+	}
+
+	private static String[] decode(String message) {
+
+		// decode message bytestring to string [<host>],<reading_name>,<value>
+		return decoded_str.split(",");
+
 	}
 
 	private static KafkaSpoutRetryService getRetryService() {
-		return new KafkaSpoutRetryExponentialBackoff(
-				KafkaSpoutRetryExponentialBackoff.TimeInterval.microSeconds(500),
+		return new KafkaSpoutRetryExponentialBackoff(KafkaSpoutRetryExponentialBackoff.TimeInterval.microSeconds(500),
 				KafkaSpoutRetryExponentialBackoff.TimeInterval.milliSeconds(2), Integer.MAX_VALUE,
 				KafkaSpoutRetryExponentialBackoff.TimeInterval.seconds(10));
 	}
