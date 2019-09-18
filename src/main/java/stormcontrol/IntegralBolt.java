@@ -30,12 +30,13 @@ public class IntegralBolt extends BaseWindowedBolt {
 	public void execute(TupleWindow inputWindow) {
 
 		List<Tuple> tuples = inputWindow.get();
-		Double setpoint = tuples.get(tuples.size() - 1).getDoubleByField("setpoint");
+		Tuple tu = tuples.get(tuples.size() - 1);
+		Double setpoint = tu.getDoubleByField("setpoint");
         double integral = 0.0;
 		// create lists of timestamps and values in window from now to now - delta_t
 		List<Double> timestamps = new ArrayList<Double>();
 		List<Double> values = new ArrayList<Double>();
-        Double delta_t = tuples.get(tuples.size() - 1).getDoubleByField("dt_int");
+        Double delta_t = tu.getDoubleByField("dt_int");
 		Double t0 = System.currentTimeMillis() - delta_t * 1000;
 		for (Tuple tuple : tuples) {
 			Double t = tuple.getDoubleByField("timestamp");
@@ -52,14 +53,12 @@ public class IntegralBolt extends BaseWindowedBolt {
 			integral += 0.5 * (timestamps.get(i + 1) - timestamps.get(i))
 					* (values.get(i + 1) + values.get(i));
 		}
-        collector.emit(new Values(tuples.get(0).getStringByField("topic"),
-				tuples.get(tuples.size() - 1).getDoubleByField("timestamp"), integral,
-				"integral", tuples.get(tuples.size() - 1).getStringByField("key")));
+        collector.emit(new Values(integral, tu.getStringByField("key")));
 
 	}
 
 	@Override
 	public void declareOutputFields(OutputFieldsDeclarer declarer) {
-		declarer.declare(new Fields("topic", "timestamp", "integral", "type", "key"));
+		declarer.declare(new Fields("integral", "key"));
 	}
 }

@@ -30,14 +30,13 @@ public class ProportionalBolt extends BaseRichBolt {
 		Double value = input.getDoubleByField("value");
 		Double setpoint = input.getDoubleByField("setpoint");
 		Double prop = value - setpoint;
-		collector.emit(new Values(input.getStringByField("topic"), input.getDoubleByField("timestamp"),
-				prop, "proportional", input.getStringByField("key")));
+		collector.emit(new Values(prop, input.getStringByField("key")));
 		collector.ack(input);
 	}
 
 	@Override
 	public void declareOutputFields(OutputFieldsDeclarer declarer) {
-		declarer.declare(new Fields("topic", "timestamp", "proportional", "type", "key"));
+		declarer.declare(new Fields("proportional", "key"));
 
 	}
 }

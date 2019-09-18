@@ -29,11 +29,12 @@ public class TimeSinceBolt extends BaseWindowedBolt {
 	@Override
 	public void execute(TupleWindow inputWindow) {
 		List<Tuple> tuples = inputWindow.get();
+		Tuple tu = tuples.get(tuples.size() - 1);
         double time_since = 0.0;
 		List<Double> timestamps = new ArrayList<Double>();
 		List<Double> values = new ArrayList<Double>();
-		double lower_threshold = tuples.get(tuples.size() - 1).getDoubleByField("lower_threshold");
-		double upper_threshold = tuples.get(tuples.size() - 1).getDoubleByField("upper_threshold");
+		double lower_threshold = tu.getDoubleByField("lower_threshold");
+		double upper_threshold = tu.getDoubleByField("upper_threshold");
 		for (Tuple tuple : tuples) {
 			timestamps.add(tuple.getDoubleByField("timestamp"));
 			values.add(tuple.getDoubleByField("value"));
@@ -45,16 +46,15 @@ public class TimeSinceBolt extends BaseWindowedBolt {
 			}
            
         }
-        System.out.println();
 		time_since = (System.currentTimeMillis() - timestamps.get(last_in_threshold))/1000;
-		collector.emit(new Values(tuples.get(0).getStringByField("topic"),
-				tuples.get(tuples.size() - 1).getDoubleByField("timestamp"),
-                time_since,
-                tuples.get(0).getStringByField("quantity")));
+		collector.emit(new Values(tu.getStringByField("type"),
+				tu.getDoubleByField("timestamp"), tu.getStringByField("host"),
+				tu.getStringByField("reading_name"), time_since, tu.getValueByField("max_duration")));
 	}
 	@Override
 	public void declareOutputFields(OutputFieldsDeclarer declarer) {
-		declarer.declare(new Fields("topic", "timestamp","timesince", "quantity"));
+		declarer.declare(new Fields("type", "timestamp", "host", "reading_name", "time_since", 
+				"max_duration"));
 
 	}
 	

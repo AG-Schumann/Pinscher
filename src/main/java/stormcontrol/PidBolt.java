@@ -34,14 +34,15 @@ public class PidBolt extends BaseRichBolt {
 		Double proportional = input.getDoubleByField("proportional");
 		Double derivative = input.getDoubleByField("derivative");
 		Double pid = A * integral + B * proportional + C * derivative;
-		collector.emit(new Values(input.getString(0), input.getDouble(1), pid,
-                    input.getStringByField("quantity")));
+		collector.emit(new Values(input.getStringByField("type"), input.getDoubleByField("timestamp"),
+				input.getStringByField("host"), input.getStringByField("reading_name"), 
+				input.getIntegerByField("recurrence"), input.getValueByField("levels"), pid));
 		collector.ack(input);
 	}
 
 	@Override
 	public void declareOutputFields(OutputFieldsDeclarer declarer) {
-		declarer.declare(new Fields("topic", "timestamp", "pid", "quantity"));
+		declarer.declare(new Fields("type", "timestamp", "host", "reading_name", "recurrence", "levels", "pid"));
 
 	}
 }

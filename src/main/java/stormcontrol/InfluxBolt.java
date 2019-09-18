@@ -36,7 +36,7 @@ public class InfluxBolt extends BaseRichBolt {
 	public void execute(Tuple input) {
 		String source = input.getSourceComponent();
 		String type = "";
-        if(source.equals("ConfigBolt")){
+		if (source.equals("ConfigBolt")){
             type = "reading";
         } else if (source.equals("PidBolt")){
             type = "pid";
