@@ -80,9 +80,9 @@ public class MainTopology {
 
 	private static KafkaSpoutConfig<String, String> getKafkaSpoutConfig(String bootstrapServers) {
 		ByTopicRecordTranslator<String, String> trans = new ByTopicRecordTranslator<>(
-				(r) -> new Values(r.topic(), (double) r.timestamp(), "", decode(r.value())),
+				(r) -> new Values(r.topic(), (double) r.timestamp(), "", r.value()),
 				new Fields("type", "timestamp", "host", "reading_name", "value"));
-		trans.forTopic("Sysmon", (r) -> new Values(r.topic(), (double) r.timestamp(), decode(r.value())),
+		trans.forTopic("Sysmon", (r) -> new Values(r.topic(), (double) r.timestamp(), r.value()),
 				new Fields("type", "timestamp", "host", "reading_name", "value"));
 
 		return KafkaSpoutConfig.builder(bootstrapServers, topics)
@@ -91,13 +91,13 @@ public class MainTopology {
 				.setFirstPollOffsetStrategy(LATEST).setMaxUncommittedOffsets(20).build();
 	}
 
-	private static String[] decode(String message) {
+/*	private static String[] decode(String message) {
 
 		// decode message bytestring to string [<host>],<reading_name>,<value>
 		return decoded_str.split(",");
 
 	}
-
+*/
 	private static KafkaSpoutRetryService getRetryService() {
 		return new KafkaSpoutRetryExponentialBackoff(
 				KafkaSpoutRetryExponentialBackoff.TimeInterval.microSeconds(500),
