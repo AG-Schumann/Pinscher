@@ -11,12 +11,15 @@ import org.influxdb.InfluxDB;
 import org.influxdb.InfluxDBFactory;
 import org.influxdb.dto.Point;
 
-import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 public class InfluxBolt extends BaseRichBolt {
 
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
 	private InfluxDB influxDB;
 	private OutputCollector collector;
 
@@ -33,7 +36,7 @@ public class InfluxBolt extends BaseRichBolt {
 	public void execute(Tuple input) {
 		String source = input.getSourceComponent();
 		String type = "";
-        if(source.equals("ConfigBolt")){
+		if (source.equals("ConfigBolt")){
             type = "reading";
         } else if (source.equals("PidBolt")){
             type = "pid";
