@@ -20,13 +20,14 @@ public class TimeSinceConfig extends BaseRichBolt {
 	 */
 	private static final long serialVersionUID = 1L;
 	private OutputCollector collector;
-	private ConfigDB config_db = new ConfigDB();
-	private String db_name = "testing";
+	private ConfigDB config_db;
+	private String db_name = "settings";
 
 	@Override
 	public void prepare(Map<String, Object> topoConf, TopologyContext context,
 			OutputCollector collector) {
 		this.collector = collector;
+        config_db = new ConfigDB();
 	}
 
 	@Override
@@ -37,7 +38,7 @@ public class TimeSinceConfig extends BaseRichBolt {
 		String reading_name = input.getStringByField("reading_name");
 
 		Document doc = new Document();
-		if (host == "") {
+		if (host.equals("")) {
 			doc = config_db.read(db_name, "readings", eq("name", reading_name));
 		} else {
 			doc = config_db.read(db_name, "readings", and(eq("name", reading_name), eq("host", host)));

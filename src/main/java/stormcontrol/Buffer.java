@@ -31,90 +31,86 @@ public class Buffer extends BaseWindowedBolt {
 	 */
 	private static final long serialVersionUID = 1L;
 	private OutputCollector collector;
-	private MongoCollection<Document> collection;
+	private ConfigDB config_db;
 	private Double last_emit = (double) System.currentTimeMillis();
-
+    private InfluxDB influx_db;
 	@Override
 	public void prepare(Map<String, Object> topoConf, TopologyContext context, OutputCollector collector) {
 		this.collector = collector;
-		String experiment_name = "testing";
-		String db_name = experiment_name + "_storm";
-		ConnectionString connection_string = new ConnectionString(
-				"mongodb://webmonitor:42RKBu2QyeOUHkxOdHAhjfIpw1cgIQVgViO4U4nPr0s=@10.4.73.172:27010/admin");
-		MongoClientSettings settings = MongoClientSettings.builder().applyConnectionString(connection_string)
-				.retryWrites(true).build();
-		MongoClient mongoClient = MongoClients.create(settings);
-		MongoDatabase database = mongoClient.getDatabase(db_name);
-		collection = database.getCollection("readout_interval");
-	}
+	    config_db = new ConfigDB(); 
+        influx_db = InfluxDBFactory.connect("http://localhost:8086");
+    }
 
 	@Override
 	public void execute(TupleWindow inputWindow) {
 		List<Tuple> tuples = inputWindow.get();
-
 		// Get time interval in ms for type from storm config db
-		Document doc = collection.find().first();
+		Document doc = config_db.read("storm", "readout_intervals");
 		String type = tuples.get(0).getStringByField("type");
 		Double time_interval = doc.getDouble(type) * 1000;
-
 		// only do this if last emit is one time_interval away
 		if ((double) System.currentTimeMillis() - last_emit >= time_interval) {
-
-			List<String> reading_names = new ArrayList<String>();
+			System.out.println("START OF NEW PUSH TO INFLUX CHAIN!");
+            List<String> reading_names = new ArrayList<String>();
 			List<String> host_per_reading = new ArrayList<String>();
 			List<Double> value_per_reading = new ArrayList<Double>();
 
 			// fill list of reading names in the window from last emit to now
+            System.out.println("THERE ARE " + tuples.size() + " TUPLES IN THE WINDOW");
+            int i = 0;
 			for (Tuple tuple : tuples) {
 				if (tuple.getDoubleByField("timestamp") >= last_emit) {
-					reading_names.add(tuple.getStringByField("reading_name"));
+                    i += 1;
+                    String reading_name = tuple.getStringByField("reading_name");
+                    if (!reading_names.contains(reading_name)) {
+					reading_names.add(reading_name);
+                    }
 				}
 			}
+            System.out.println("OF WHICH " + i + " ARE IN THE TIME WINDOW!");
+            System.out.println("FOUND " + reading_names.size() + " DIFFERENT READINGS!");
 			// for each reading_name calculate mean of corresponding values, emit to stream
 			// and
 			// fill list of value_per _reading
 			for (String reading_name : reading_names) {
 				List<Tuple> tuples_by_name = new ArrayList<Tuple>();
 				for (Tuple tuple : tuples) {
-					if (tuple.getStringByField("reading_name") == reading_name
-							&& tuple.getDoubleByField("timestamp") >= last_emit) {
+					if (tuple.getDoubleByField("timestamp") - last_emit > 0 && tuple.getStringByField("reading_name").equals(reading_name)) {
 						tuples_by_name.add(tuple);
 					}
 				}
 				Double mean = 0.0;
 				String host = tuples_by_name.get(0).getStringByField("host");
-				if (tuples_by_name.size() > 0) {
-					for (Tuple tuple_by_name : tuples_by_name) {
-						mean += tuple_by_name.getDoubleByField("value");
-
-						mean = mean / tuples_by_name.size();
-
-						collector.emit(new Values(type,
-								tuples_by_name.get(tuples_by_name.size() - 1).getDoubleByField("timestamp"),
-								host, reading_name, mean));
-					}
-				}
+				for (Tuple tuple_by_name : tuples_by_name) {
+                    mean += Double.parseDouble(tuple_by_name.getStringByField("value"));
+                }
+   				mean = mean / tuples_by_name.size();
+				collector.emit(new Values(type, 
+                            tuples_by_name.get(tuples_by_name.size() - 1).getDoubleByField("timestamp"),
+                            host, reading_name, mean));
+				
 				host_per_reading.add(host);
 				value_per_reading.add(mean);
-			}
+            }
+            
+            if( reading_names.size() > 0){
 			WriteToStorage(type, host_per_reading, reading_names, value_per_reading);
+            }
 			last_emit = (double) System.currentTimeMillis();
-		}
-	}
+        }
+    }
 
 	private void WriteToStorage(String measurement, List<String> host_per_reading, List<String> rd_names,
 			List<Double> values) {
-
-		InfluxDB influxDB = InfluxDBFactory.connect("http://localhost:8086");
-		influxDB.setDatabase("testing_data");
+		influx_db.setDatabase("testing_data");
 		Builder point = Point.measurement(measurement);
-		for (int i = 0; i < rd_names.size(); ++i) {
+		for (int i = 0; i < values.size(); ++i) {
 			point.addField(rd_names.get(i), values.get(i));
 			if (host_per_reading.get(i) != "") {
 				point.tag("host", host_per_reading.get(i));
 			}
 		}
-		influxDB.write(point.build());
+		influx_db.write(point.build());
 	}
 
 	@Override

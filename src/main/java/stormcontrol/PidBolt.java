@@ -36,7 +36,7 @@ public class PidBolt extends BaseRichBolt {
 		Double pid = A * integral + B * proportional + C * derivative;
 		collector.emit(new Values(input.getStringByField("type"), input.getDoubleByField("timestamp"),
 				input.getStringByField("host"), input.getStringByField("reading_name"), 
-				input.getIntegerByField("recurrence"), input.getValueByField("levels"), pid));
+				input.getDoubleByField("recurrence"), input.getValueByField("levels"), pid));
 		collector.ack(input);
 	}
 
