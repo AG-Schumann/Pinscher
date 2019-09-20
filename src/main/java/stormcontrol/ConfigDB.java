@@ -22,7 +22,7 @@ public final class ConfigDB {
 	}
 
 	public MongoCollection<Document> check(String db, String collection_name) {
-		String experiment_name = "testing";
+		String experiment_name = "pancake";
 		String db_name = experiment_name + "_" + db;
 		MongoDatabase database = mongoClient.getDatabase(db_name);
 		return database.getCollection(collection_name);

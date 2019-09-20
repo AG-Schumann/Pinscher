@@ -39,13 +39,14 @@ public class PidConfig extends BaseRichBolt {
 		String key = reading_name + "_" + host + "_" + timestamp;
 
 		// get PID alarm parameter from config DB
-		Document doc = new Document();
+		try {
+        Document doc = new Document();
 		if (host.equals("")) {
 			doc = config_db.read(db_name, "readings", eq("name", reading_name));
 		} else {
 			doc = config_db.read(db_name, "readings", and(eq("name", reading_name), eq("host", host)));
 		}
-		List<Document> alarms = (List<Document>) doc.get("alarms");
+        List<Document> alarms = (List<Document>) doc.get("alarms");
 		for (Document alarm : alarms) {
 			if (alarm.getString("type").equals("pid")) {
 				collector.emit(new Values(type, timestamp, host, reading_name,
@@ -55,7 +56,11 @@ public class PidConfig extends BaseRichBolt {
 						alarm.get("levels"), alarm.getDouble("recurrence"), key));
 			}
 		}
-		collector.ack(input);
+        } catch (Exception e) {
+            
+        } finally {
+            collector.ack(input);
+        }
 	}
 
 	@Override
