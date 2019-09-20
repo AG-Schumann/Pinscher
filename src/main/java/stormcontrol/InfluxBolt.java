@@ -35,22 +35,23 @@ public class InfluxBolt extends BaseRichBolt {
 	@Override
 	public void execute(Tuple input) {
 		String source = input.getSourceComponent();
-		String type = "";
-		if (source.equals("ConfigBolt")){
-            type = "reading";
-        } else if (source.equals("PidBolt")){
-            type = "pid";
-        } else if (source.equals("TimeSinceBolt")){
-            type = "timesince";
+        String reading_name = "";
+        Double value = -1.;
+        if (source.equals("PidBolt")) {
+         reading_name = input.getStringByField("reading_name");
+         value = input.getDoubleByField("pid");
+
+        } else if (source.equals("KafkaSpout")) {
+         reading_name = input.getStringByField("reading_name");
+         value = Double.parseDouble(input.getStringByField("value"));
+        } else {  
+     
+        reading_name = input.getString(1).split("__")[0];
+        value = input.getDouble(0);
         }
-		String topic = input.getStringByField("topic");
-		String[] parts = topic.split("__");
-		String sensor_name = parts[0];
-		String reading = parts[1];
-        String quantity = input.getStringByField("quantity");
-		Point point = Point.measurement(quantity)
-				.time(input.getDoubleByField("timestamp").longValue(), TimeUnit.MILLISECONDS)
-				.tag("sensor_name", sensor_name).tag("type", type).addField(reading, input.getDouble(2))
+		Point point = Point.measurement("alarms")
+				.tag("source", source)
+                .addField(reading_name, value)
 				.build();
 		influxDB.write(point);
 		// System.out.println("WROTE POINT TO DATABASE" + sensor_name + " " + type + " @

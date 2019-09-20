@@ -19,13 +19,14 @@ public class CheckAlarm extends BaseWindowedBolt {
 	 */
 	private static final long serialVersionUID = 1L;
 	private OutputCollector collector;
-	private ConfigDB config_db = new ConfigDB();
+    private ConfigDB config_db;
 	private String db_name = "testing";
 
 	@Override
 	public void prepare(Map<String, Object> topoConf, TopologyContext context,
 			OutputCollector collector) {
-		this.collector = collector;
+		this.collector = collector;        
+	    ConfigDB config_db = new ConfigDB();
 	}
 
 	@Override

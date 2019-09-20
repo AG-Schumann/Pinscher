@@ -38,7 +38,10 @@ public final class ConfigDB {
 	public Document read(String db_name, String collection_name, Bson filter) {
 		MongoCollection<Document> collection = check(db_name, collection_name);
 		return collection.find(filter).first();
-
+    }
+	public Document read(String db_name, String collection_name) {
+		MongoCollection<Document> collection = check(db_name, collection_name);
+		return collection.find().first();
 	}
 
 	public void writeOne(String db_name, String collection_name, Document log) {

@@ -19,14 +19,14 @@ public class PidConfig extends BaseRichBolt {
 	 */
 	private static final long serialVersionUID = 1L;
 	private OutputCollector collector;
-	private ConfigDB config_db = new ConfigDB();
-	private String experiment_name = "testing";
-	private String db_name = experiment_name + "_settings";
+	private ConfigDB config_db;
+	private String db_name = "settings";
 
 	@Override
 	public void prepare(Map<String, Object> map, TopologyContext topologyContext,
 			OutputCollector collector) {
 		this.collector = collector;
+        config_db = new ConfigDB();
 	}
 
 	@Override
@@ -40,7 +40,7 @@ public class PidConfig extends BaseRichBolt {
 
 		// get PID alarm parameter from config DB
 		Document doc = new Document();
-		if (host == "") {
+		if (host.equals("")) {
 			doc = config_db.read(db_name, "readings", eq("name", reading_name));
 		} else {
 			doc = config_db.read(db_name, "readings", and(eq("name", reading_name), eq("host", host)));
@@ -52,7 +52,7 @@ public class PidConfig extends BaseRichBolt {
 						input.getDoubleByField("value"), alarm.getDouble("a"), alarm.getDouble("b"),
 						alarm.getDouble("c"), alarm.getDouble("setpoint"),
 						alarm.getDouble("dt_integral"), alarm.getDouble("dt_differential"),
-						alarm.get("levels"), alarm.getInteger("recurrence"), key));
+						alarm.get("levels"), alarm.getDouble("recurrence"), key));
 			}
 		}
 		collector.ack(input);
