@@ -22,14 +22,14 @@ public class InfluxBolt extends BaseRichBolt {
 	private static final long serialVersionUID = 1L;
 	private InfluxDB influxDB;
 	private OutputCollector collector;
-
+    private String experiment_name = "pancake"; 
 	@Override
 	public void prepare(Map<String, Object> map, TopologyContext topologyContext,
 			OutputCollector outputCollector) {
 		collector = outputCollector;
 		influxDB = InfluxDBFactory.connect("http://localhost:8086");
 		// this should be imported from settings.json in the future
-		influxDB.setDatabase("testing_data");
+		influxDB.setDatabase(experiment_name);
 	}
 
 	@Override

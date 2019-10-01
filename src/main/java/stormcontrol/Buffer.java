@@ -25,6 +25,8 @@ import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 
+import static com.mongodb.client.model.Filters.*;
+
 public class Buffer extends BaseWindowedBolt {
 	/**
 	 * 
@@ -34,6 +36,7 @@ public class Buffer extends BaseWindowedBolt {
 	private ConfigDB config_db;
 	private Double last_emit = (double) System.currentTimeMillis();
     private InfluxDB influx_db;
+    private String experiment_name = "pancake";
 	@Override
 	public void prepare(Map<String, Object> topoConf, TopologyContext context, OutputCollector collector) {
 		this.collector = collector;
@@ -45,33 +48,34 @@ public class Buffer extends BaseWindowedBolt {
 	public void execute(TupleWindow inputWindow) {
 		List<Tuple> tuples = inputWindow.get();
 		// Get time interval in ms for type from storm config db
-		Document doc = config_db.read("storm", "readout_intervals");
-		String type = tuples.get(0).getStringByField("type");
-		Double time_interval = doc.getDouble(type) * 1000;
-		// only do this if last emit is one time_interval away
+        String type = tuples.get(0).getStringByField("type");
+        Double time_interval = 60000.0;
+        try {
+
+		    Document doc = config_db.read("settings", "experiment_config", eq("name", "storm"));
+            Document time_intervals = (Document) doc.get("intervals");
+            time_interval = time_intervals.getDouble(type) * 1000;
+        } catch (Exception e) {
+            
+        }
+        
+		// only do this if last emit is over one time_interval away
 		if ((double) System.currentTimeMillis() - last_emit >= time_interval) {
-			System.out.println("START OF NEW PUSH TO INFLUX CHAIN!");
             List<String> reading_names = new ArrayList<String>();
 			List<String> host_per_reading = new ArrayList<String>();
 			List<Double> value_per_reading = new ArrayList<Double>();
 
 			// fill list of reading names in the window from last emit to now
-            System.out.println("THERE ARE " + tuples.size() + " TUPLES IN THE WINDOW");
-            int i = 0;
 			for (Tuple tuple : tuples) {
 				if (tuple.getDoubleByField("timestamp") >= last_emit) {
-                    i += 1;
                     String reading_name = tuple.getStringByField("reading_name");
                     if (!reading_names.contains(reading_name)) {
 					reading_names.add(reading_name);
                     }
 				}
 			}
-            System.out.println("OF WHICH " + i + " ARE IN THE TIME WINDOW!");
-            System.out.println("FOUND " + reading_names.size() + " DIFFERENT READINGS!");
 			// for each reading_name calculate mean of corresponding values, emit to stream
-			// and
-			// fill list of value_per _reading
+			// and fill list of value_per_reading
 			for (String reading_name : reading_names) {
 				List<Tuple> tuples_by_name = new ArrayList<Tuple>();
 				for (Tuple tuple : tuples) {
@@ -102,7 +106,7 @@ public class Buffer extends BaseWindowedBolt {
 
 	private void WriteToStorage(String measurement, List<String> host_per_reading, List<String> rd_names,
 			List<Double> values) {
-		influx_db.setDatabase("testing_data");
+		influx_db.setDatabase(experiment_name);
 		Builder point = Point.measurement(measurement);
 		for (int i = 0; i < values.size(); ++i) {
 			point.addField(rd_names.get(i), values.get(i));

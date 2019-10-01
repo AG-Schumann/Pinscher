@@ -22,10 +22,11 @@ import java.util.regex.Pattern;
 
 public class MainTopology {
 
-	private static final String[] topics = {"Pressure", "Voltage", "Temperature"};
+	private static final String[] topics = {"pressure", "voltage", "temperature", "current", "status",
+        "power", "level", "sysmon", "other"};
 
 	public static void main(String[] args) {
-
+        
 		String bootstrap_servers = "localhost:9092";
 		int window_length = 600;
 		int max_recurrence = 50;
@@ -90,10 +91,11 @@ public class MainTopology {
 
 	private static KafkaSpoutConfig<String, String> getKafkaSpoutConfig(String bootstrapServers) {
 		ByTopicRecordTranslator<String, String> trans = new ByTopicRecordTranslator<>(
-				(r) -> new Values(r.topic(), (double) r.timestamp(), decode(r.value())[0],
-                    decode(r.value())[1], decode(r.value())[2]),
+				(r) -> new Values(r.topic(), (double) r.timestamp(), "", decode(r.value())[0],
+                    decode(r.value())[1]),
 				new Fields("type", "timestamp", "host", "reading_name", "value"));
-		trans.forTopic("Sysmon", (r) -> new Values(r.topic(), (double) r.timestamp(), decode(r.value())[0], decode(r.value())[1], decode(r.value())[2]),
+		trans.forTopic("sysmon", (r) -> new Values(r.topic(), (double) r.timestamp(),
+                    decode(r.value())[0], decode(r.value())[1], decode(r.value())[2]),
 				new Fields("type", "timestamp", "host", "reading_name", "value"));
 
 		return KafkaSpoutConfig.builder(bootstrapServers, topics)
@@ -104,7 +106,7 @@ public class MainTopology {
 
 	private static String[] decode(String message) {
 
-		// decode message bytestring to string [<host>],<reading_name>,<value>
+		// message: "[<host>],<reading_name>,<value>"
 		return message.split(",");
 
 	}

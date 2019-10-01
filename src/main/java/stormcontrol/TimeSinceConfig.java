@@ -36,22 +36,28 @@ public class TimeSinceConfig extends BaseRichBolt {
 		Double timestamp = input.getDoubleByField("timestamp");
 		String host = input.getStringByField("host");
 		String reading_name = input.getStringByField("reading_name");
-
-		Document doc = new Document();
-		if (host.equals("")) {
-			doc = config_db.read(db_name, "readings", eq("name", reading_name));
-		} else {
-			doc = config_db.read(db_name, "readings", and(eq("name", reading_name), eq("host", host)));
-		}
-		List<Document> alarms = (List<Document>) doc.get("alarms");
-		for (Document alarm : alarms) {
-			if (alarm.getString("type").equals("time_since")) {
-				collector.emit(new Values(type, timestamp, host, reading_name,
-						input.getDoubleByField("value"), alarm.getDouble("lower_threshold"),
-						alarm.getDouble("upper_threshold"), alarm.get("max_duration")));
-			}
-		}
+        
+        try {
+		    Document doc = new Document();
+		    if (host.equals("")) {
+			    doc = config_db.read(db_name, "readings", eq("name", reading_name));
+		    } else {
+			    doc = config_db.read(db_name, "readings", and(eq("name", reading_name),
+                            eq("host", host)));
+		    }
+		    List<Document> alarms = (List<Document>) doc.get("alarms");
+		    for (Document alarm : alarms) {
+			    if (alarm.getString("type").equals("time_since")) {
+				    collector.emit(new Values(type, timestamp, host, reading_name,
+                                input.getDoubleByField("value"), alarm.getDouble("lower_threshold"),
+                                alarm.getDouble("upper_threshold"), alarm.get("max_duration")));
+			    }
+		    }
+        } catch (Exception e) {
+            // How do we log cases like that?
+        } finally {
 		collector.ack(input);
+        }
 	}
 
 	@Override
