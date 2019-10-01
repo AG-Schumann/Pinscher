@@ -91,10 +91,11 @@ public class MainTopology {
 
 	private static KafkaSpoutConfig<String, String> getKafkaSpoutConfig(String bootstrapServers) {
 		ByTopicRecordTranslator<String, String> trans = new ByTopicRecordTranslator<>(
-				(r) -> new Values(r.topic(), (double) r.timestamp(), "", String... decode(r.value())),
+				(r) -> new Values(r.topic(), (double) r.timestamp(), "", decode(r.value())[0],
+                    decode(r.value())[1]),
 				new Fields("type", "timestamp", "host", "reading_name", "value"));
 		trans.forTopic("sysmon", (r) -> new Values(r.topic(), (double) r.timestamp(),
-                    String... decode(r.value())),
+                    decode(r.value())[0], decode(r.value())[1], decode(r.value())[2]),
 				new Fields("type", "timestamp", "host", "reading_name", "value"));
 
 		return KafkaSpoutConfig.builder(bootstrapServers, topics)

@@ -25,6 +25,8 @@ import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 
+import static com.mongodb.client.model.Filters.*;
+
 public class Buffer extends BaseWindowedBolt {
 	/**
 	 * 
@@ -46,10 +48,18 @@ public class Buffer extends BaseWindowedBolt {
 	public void execute(TupleWindow inputWindow) {
 		List<Tuple> tuples = inputWindow.get();
 		// Get time interval in ms for type from storm config db
-		Document doc = config_db.read("storm", "readout_intervals");
-		String type = tuples.get(0).getStringByField("type");
-		Double time_interval = doc.getDouble(type) * 1000;
-		// only do this if last emit is one time_interval away
+        String type = tuples.get(0).getStringByField("type");
+        Double time_interval = 60000.0;
+        try {
+
+		    Document doc = config_db.read("settings", "experiment_config", eq("name", "storm"));
+            Document time_intervals = (Document) doc.get("intervals");
+            time_interval = time_intervals.getDouble(type) * 1000;
+        } catch (Exception e) {
+            
+        }
+        
+		// only do this if last emit is over one time_interval away
 		if ((double) System.currentTimeMillis() - last_emit >= time_interval) {
             List<String> reading_names = new ArrayList<String>();
 			List<String> host_per_reading = new ArrayList<String>();
@@ -65,7 +75,7 @@ public class Buffer extends BaseWindowedBolt {
 				}
 			}
 			// for each reading_name calculate mean of corresponding values, emit to stream
-			// and fill list of value_per _reading
+			// and fill list of value_per_reading
 			for (String reading_name : reading_names) {
 				List<Tuple> tuples_by_name = new ArrayList<Tuple>();
 				for (Tuple tuple : tuples) {
