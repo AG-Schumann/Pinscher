@@ -20,26 +20,27 @@ public class StreamSplitter extends BaseRichBolt {
 	private static final List<String> topics = Arrays.asList("pressure", "voltage", "temperature",
             "current", "status", "power", "level", "sysmon", "other");
 	private OutputCollector collector;
-    private List<Integer> numCounterTasks;
+    private int numCounterTasks;
 
 	@Override
 	public void prepare(Map<String, Object> topoConf, TopologyContext context, OutputCollector collector) {
 		this.collector = collector;
-        this.numCounterTasks = context.getComponentTasks("Buffer");
+        this.numCounterTasks = context.getComponentTasks("Buffer").size();
 	}
 
 	@Override
 	public void execute(Tuple input) {
 		String topic = input.getStringByField("topic");
-		int task_id = topics.indexOf(topic);
-		collector.emitDirect(numCounterTasks.get(task_id),
+		int task_id = topics.indexOf(topic) + 1;
+		collector.emitDirect(task_id, "direct_stream",
 				new Values(topic, input.getDoubleByField("timestamp"), input.getStringByField("host"),
 						input.getStringByField("reading_name"), input.getStringByField("value")));
+        collector.ack(input);
 	}
 
 	@Override
 	public void declareOutputFields(OutputFieldsDeclarer declarer) {
-		declarer.declare(new Fields("topic", "timestamp", "host", "reading_name", "value"));
+        declarer.declareStream("direct_stream", true, new Fields("topic", "timestamp", "host", "reading_name", "value"));
 
 	}
 
