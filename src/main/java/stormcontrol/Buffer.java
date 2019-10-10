@@ -59,7 +59,7 @@ public class Buffer extends BaseWindowedBolt {
             
         }
         
-		// only do this if last emit is over one time_interval away
+		// only do this if last emit is one time_interval away
 		if ((double) System.currentTimeMillis() - last_emit >= time_interval) {
             List<String> reading_names = new ArrayList<String>();
 			List<String> host_per_reading = new ArrayList<String>();
