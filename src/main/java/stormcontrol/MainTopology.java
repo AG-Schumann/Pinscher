@@ -42,9 +42,11 @@ public class MainTopology {
 		// buffer
 		tp.setBolt("StreamSplitter", new StreamSplitter()).shuffleGrouping("KafkaSpout");
 		tp.setBolt("Buffer", new Buffer().withWindow(new Duration(window_length, TimeUnit.SECONDS),
-				new Duration(500, TimeUnit.MILLISECONDS)), topics.length - 1).directGrouping("Buffer");
+				new Duration(500, TimeUnit.MILLISECONDS)), topics.length - 1)
+            .directGrouping("StreamSplitter", "direct_stream");
 
 		// PID alarm
+       /*
 		tp.setBolt("PidConfig", new PidConfig()).shuffleGrouping("Buffer");
 		tp.setBolt("PropBolt", new ProportionalBolt()).shuffleGrouping("PidConfig");
 		tp.setBolt("IntBolt", new IntegralBolt().withWindow(new Duration(window_length, TimeUnit.SECONDS), Count.of(1)),
@@ -78,6 +80,7 @@ public class MainTopology {
 		// .shuffleGrouping("DiffBolt")
 		// .shuffleGrouping("PidBolt");
 		// .shuffleGrouping("KafkaSpout");
+        */
 		// Submit topology to production cluster
 		try {
 			StormSubmitter.submitTopology("MainTopology", config, tp.createTopology());
