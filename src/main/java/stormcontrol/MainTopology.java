@@ -88,21 +88,13 @@ public class MainTopology {
 
 	private static KafkaSpoutConfig<String, String> getKafkaSpoutConfig(String bootstrapServers) {
 		ByTopicRecordTranslator<String, String> trans = new ByTopicRecordTranslator<>(
-				(r) -> new Values(r.topic(), (double) r.timestamp(), "", decode(r.value())[0], decode(r.value())[1]),
-				new Fields("topic", "timestamp", "host", "reading_name", "value"), "default");
-		for (String topic : topics) {
-			if (topic.equals("sysmon")) {
-				trans.forTopic(topic,
-						(r) -> new Values(r.topic(), (double) r.timestamp(), decode(r.value())[0], decode(r.value())[1],
-								decode(r.value())[2]),
-						new Fields("topic", "timestamp", "host", "reading_name", "value"), topic);
-			} else {
-				trans.forTopic(topic,
-						(r) -> new Values(r.topic(), (double) r.timestamp(), decode(r.value())[0], decode(r.value())[1],
-								decode(r.value())[2]),
-						new Fields("topic", "timestamp", "host", "reading_name", "value"), topic);
-			}
-		}
+				(r) -> new Values(r.topic(), (double) r.timestamp(), "", decode(r.value())[0],
+                    decode(r.value())[1]),
+				new Fields("topic", "timestamp", "host", "reading_name", "value"));
+				trans.forTopic("sysmon",
+						(r) -> new Values(r.topic(), (double) r.timestamp(), decode(r.value())[0],
+                            decode(r.value())[1], decode(r.value())[2]),
+						new Fields("topic", "timestamp", "host", "reading_name", "value"));
 
 		return KafkaSpoutConfig.builder(bootstrapServers, topics)
 				.setProp(ConsumerConfig.GROUP_ID_CONFIG, "kafkaSpoutTestGroup").setRetry(getRetryService())

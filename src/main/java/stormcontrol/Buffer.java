@@ -48,7 +48,7 @@ public class Buffer extends BaseWindowedBolt {
 	public void execute(TupleWindow inputWindow) {
 		List<Tuple> tuples = inputWindow.get();
 		// Get time interval in ms for type from storm config db
-        String type = tuples.get(0).getStringByField("type");
+        String type = tuples.get(0).getStringByField("topic");
         Double time_interval = 60000.0;
         try {
 

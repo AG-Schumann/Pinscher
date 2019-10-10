@@ -17,23 +17,24 @@ public class StreamSplitter extends BaseRichBolt {
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
-	private static final List<String> topics = Arrays.asList("pressure", "voltage", "temperature", "current", "status",
-			"power", "level", "sysmon", "other");
+	private static final List<String> topics = Arrays.asList("pressure", "voltage", "temperature",
+            "current", "status", "power", "level", "sysmon", "other");
 	private OutputCollector collector;
+    private List<Integer> numCounterTasks;
 
 	@Override
 	public void prepare(Map<String, Object> topoConf, TopologyContext context, OutputCollector collector) {
-		collector = this.collector;
-
+		this.collector = collector;
+        this.numCounterTasks = context.getComponentTasks("Buffer");
 	}
 
 	@Override
 	public void execute(Tuple input) {
 		String topic = input.getStringByField("topic");
 		int task_id = topics.indexOf(topic);
-		collector.emitDirect(task_id,
+		collector.emitDirect(numCounterTasks.get(task_id),
 				new Values(topic, input.getDoubleByField("timestamp"), input.getStringByField("host"),
-						input.getStringByField("reading_name"), input.getDoubleByField("value")));
+						input.getStringByField("reading_name"), input.getStringByField("value")));
 	}
 
 	@Override
