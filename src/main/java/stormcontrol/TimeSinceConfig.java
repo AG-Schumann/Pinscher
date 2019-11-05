@@ -32,7 +32,7 @@ public class TimeSinceConfig extends BaseRichBolt {
 
 	@Override
 	public void execute(Tuple input) {
-		String type = input.getStringByField("type");
+		String topic = input.getStringByField("topic");
 		Double timestamp = input.getDoubleByField("timestamp");
 		String host = input.getStringByField("host");
 		String reading_name = input.getStringByField("reading_name");
@@ -40,15 +40,15 @@ public class TimeSinceConfig extends BaseRichBolt {
         try {
 		    Document doc = new Document();
 		    if (host.equals("")) {
-			    doc = config_db.read(db_name, "readings", eq("name", reading_name));
+			    doc = config_db.readOne(db_name, "readings", eq("name", reading_name));
 		    } else {
-			    doc = config_db.read(db_name, "readings", and(eq("name", reading_name),
+			    doc = config_db.readOne(db_name, "readings", and(eq("name", reading_name),
                             eq("host", host)));
 		    }
 		    List<Document> alarms = (List<Document>) doc.get("alarms");
 		    for (Document alarm : alarms) {
 			    if (alarm.getString("type").equals("time_since")) {
-				    collector.emit(new Values(type, timestamp, host, reading_name,
+				    collector.emit(new Values(topic, timestamp, host, reading_name,
                                 input.getDoubleByField("value"), alarm.getDouble("lower_threshold"),
                                 alarm.getDouble("upper_threshold"), alarm.get("max_duration")));
 			    }
@@ -56,13 +56,13 @@ public class TimeSinceConfig extends BaseRichBolt {
         } catch (Exception e) {
             // How do we log cases like that?
         } finally {
-		collector.ack(input);
+		   collector.ack(input);
         }
 	}
 
 	@Override
 	public void declareOutputFields(OutputFieldsDeclarer declarer) {
-		declarer.declare(new Fields("type", "timestamp", "host", "reading_name", "value",
+		declarer.declare(new Fields("topic", "timestamp", "host", "reading_name", "value",
 				"lower_threshold", "upper_threshold", "max_duration"));
 	}
 }

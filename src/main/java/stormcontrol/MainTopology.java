@@ -22,11 +22,10 @@ import java.util.regex.Pattern;
 
 public class MainTopology {
 
-	private static final String[] topics = { "pressure", "voltage", "temperature", "current", "status", "power",
-			"level", "sysmon", "other" };
+	private static final String[] topics = {"pressure", "voltage", "temperature", "current", "status",
+        "power", "level", "sysmon", "other" };
 
 	public static void main(String[] args) {
-
 		String bootstrap_servers = "localhost:9092";
 		int window_length = 600;
 		int max_recurrence = 50;
@@ -42,48 +41,53 @@ public class MainTopology {
 		// buffer
 		tp.setBolt("StreamSplitter", new StreamSplitter()).shuffleGrouping("KafkaSpout");
 		tp.setBolt("Buffer", new Buffer().withWindow(new Duration(window_length, TimeUnit.SECONDS),
-				new Duration(500, TimeUnit.MILLISECONDS)), topics.length - 1)
+				Count.of(1)), topics.length)
             .directGrouping("StreamSplitter", "direct_stream");
 
 		// PID alarm
-       /*
-		tp.setBolt("PidConfig", new PidConfig()).shuffleGrouping("Buffer");
-		tp.setBolt("PropBolt", new ProportionalBolt()).shuffleGrouping("PidConfig");
-		tp.setBolt("IntBolt", new IntegralBolt().withWindow(new Duration(window_length, TimeUnit.SECONDS), Count.of(1)),
-				5).fieldsGrouping("PidConfig", new Fields("host", "reading_name"));
-		tp.setBolt("DiffBolt",
-				new DifferentiatorBolt().withWindow(new Duration(window_length, TimeUnit.SECONDS), Count.of(1)), 5)
-				.fieldsGrouping("PidConfig", new Fields("host", "reading_name"));
-		JoinBolt joinPid = new JoinBolt("PidConfig", "key").join("IntBolt", "key", "PidConfig")
+		tp.setBolt("PidConfig", new PidConfig(), 5).shuffleGrouping("Buffer");
+		
+        tp.setBolt("PropBolt", new ProportionalBolt()).shuffleGrouping("PidConfig");
+		
+        tp.setBolt("IntBolt", new IntegralBolt()
+                .withWindow(new Duration(window_length, TimeUnit.SECONDS), Count.of(1)),5)
+            .fieldsGrouping("PidConfig", new Fields("host", "reading_name"));
+		
+        tp.setBolt("DiffBolt", new DifferentiatorBolt()
+                .withWindow(new Duration(window_length, TimeUnit.SECONDS), Count.of(1)), 5)
+            .fieldsGrouping("PidConfig", new Fields("host", "reading_name"));
+		
+        JoinBolt joinPid = new JoinBolt("PidConfig", "key").join("IntBolt", "key", "PidConfig")
 				.join("DiffBolt", "key", "IntBolt").join("PropBolt", "key", "DiffBolt")
-				.select("type, timestamp, host, reading_name, a, b, c, levels, recurrence,"
+				.select("topic, timestamp, host, reading_name, a, b, c, levels, recurrence,"
 						+ " integral, proportional, derivative")
 				.withTumblingWindow(new BaseWindowedBolt.Duration(5, TimeUnit.SECONDS));
 		tp.setBolt("JoinPid", joinPid, 5).fieldsGrouping("PidConfig", new Fields("key"))
-				.fieldsGrouping("IntBolt", new Fields("key")).fieldsGrouping("PropBolt", new Fields("key"))
+				.fieldsGrouping("IntBolt", new Fields("key"))
+                .fieldsGrouping("PropBolt", new Fields("key"))
 				.fieldsGrouping("DiffBolt", new Fields("key"));
 
 		tp.setBolt("PidBolt", new PidBolt()).shuffleGrouping("JoinPid");
-
+        
 		// Time Since alarm
-		tp.setBolt("TimeSinceConfig", new TimeSinceConfig()).shuffleGrouping("Buffer");
-		tp.setBolt("TimeSinceBolt",
-				new TimeSinceBolt().withWindow(new Duration(window_length, TimeUnit.SECONDS), Count.of(1)), 10)
-				.fieldsGrouping("TimeSinceConfig", new Fields("host", "reading_name"));
-		// tp.setBolt("CheckAlarm", new CheckAlarm()
-		// .withWindow(Count.of(max_recurrence)), 5)
-		// .shuffleGrouping("PidBolt").shuffleGrouping("TimeSinceBolt");
-
-		// tp.setBolt("ToInflux", new InfluxBolt())
-		// .shuffleGrouping("PropBolt")
-		// .shuffleGrouping("IntBolt")
-		// .shuffleGrouping("DiffBolt")
-		// .shuffleGrouping("PidBolt");
-		// .shuffleGrouping("KafkaSpout");
+		tp.setBolt("TimeSinceConfig", new TimeSinceConfig(), 5).shuffleGrouping("Buffer");
+		tp.setBolt("TimeSinceBolt", new TimeSinceBolt()
+                .withWindow(new Duration(window_length, TimeUnit.SECONDS), Count.of(1)), 10)
+            .fieldsGrouping("TimeSinceConfig", new Fields("host", "reading_name"));
+        tp.setBolt("CheckAlarm", new CheckAlarm()
+                .withWindow(Count.of(max_recurrence)), 5)
+            .shuffleGrouping("PidBolt").shuffleGrouping("TimeSinceBolt");
+        /*
+		tp.setBolt("ToInflux", new InfluxBolt())
+            .shuffleGrouping("PropBolt")
+            .shuffleGrouping("IntBolt")
+            .shuffleGrouping("DiffBolt")
+            .shuffleGrouping("PidBolt");
+		    .shuffleGrouping("KafkaSpout");
         */
 		// Submit topology to production cluster
 		try {
-			StormSubmitter.submitTopology("MainTopology", config, tp.createTopology());
+			StormSubmitter.submitTopology("TestTopology", config, tp.createTopology());
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

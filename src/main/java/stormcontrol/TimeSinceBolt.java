@@ -47,16 +47,15 @@ public class TimeSinceBolt extends BaseWindowedBolt {
            
         }
 		time_since = (System.currentTimeMillis() - timestamps.get(last_in_threshold))/1000;
-		collector.emit(new Values(tu.getStringByField("type"),
+		collector.emit(new Values(tu.getStringByField("topic"),
 				tu.getDoubleByField("timestamp"), tu.getStringByField("host"),
-				tu.getStringByField("reading_name"), time_since, tu.getValueByField("max_duration")));
+				tu.getStringByField("reading_name"), time_since, lower_threshold, upper_threshold, 
+                tu.getValueByField("max_duration")));
 	}
+
 	@Override
 	public void declareOutputFields(OutputFieldsDeclarer declarer) {
-		declarer.declare(new Fields("type", "timestamp", "host", "reading_name", "time_since", 
-				"max_duration"));
-
+		declarer.declare(new Fields("topic", "timestamp", "host", "reading_name", "time_since",
+                    "lower_threshold", "upper_threshold", "max_duration"));
 	}
-	
-
 }

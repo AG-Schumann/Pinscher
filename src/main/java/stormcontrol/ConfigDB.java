@@ -1,5 +1,7 @@
 package stormcontrol;
 
+import java.util.ArrayList;
+import java.util.List;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 
@@ -8,6 +10,7 @@ import com.mongodb.ConnectionString;
 import com.mongodb.MongoClientSettings;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
+import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.util.JSON;
@@ -24,7 +27,7 @@ public final class ConfigDB {
 	public MongoCollection<Document> check(String db, String collection_name) {
 		String experiment_name = "pancake";
 		String db_name = experiment_name + "_" + db;
-		MongoDatabase database = mongoClient.getDatabase(db_name);
+        MongoDatabase database = mongoClient.getDatabase(db_name);
 		return database.getCollection(collection_name);
 	}
 
@@ -35,17 +38,43 @@ public final class ConfigDB {
 		mongoClient = MongoClients.create(settings);
 	}
 
-	public Document read(String db_name, String collection_name, Bson filter) {
+  
+	public Document readOne(String db_name, String collection_name, Bson filter) {
 		MongoCollection<Document> collection = check(db_name, collection_name);
 		return collection.find(filter).first();
     }
-	public Document read(String db_name, String collection_name) {
+	public Document readOne(String db_name, String collection_name) {
 		MongoCollection<Document> collection = check(db_name, collection_name);
 		return collection.find().first();
 	}
+    public List<Document> readMany(String db_name, String collection_name, Bson filter) {
+        MongoCollection<Document> collection = check(db_name, collection_name);
+        MongoCursor<Document> cursor = collection.find(filter).iterator();
+        List<Document> list = new ArrayList<Document>();
+        try {
+            while (cursor.hasNext()) {
+                list.add(cursor.next());
+            }
+        } catch(Exception e) {
+        }
+        return list;
+    }
 
-	public void writeOne(String db_name, String collection_name, Document log) {
+    public List<Document> readMany(String db_name, String collection_name) {
+        MongoCollection<Document> collection = check(db_name, collection_name);
+        MongoCursor<Document> cursor = collection.find().iterator();
+        List<Document> list = new ArrayList<Document>();
+        try {
+            while (cursor.hasNext()) {
+                list.add(cursor.next());
+            }
+        } catch(Exception e) {
+        }
+        return list;
+    }
+
+	public void writeOne(String db_name, String collection_name, Document doc) {
 		MongoCollection<Document> collection = check(db_name, collection_name);
-		collection.insertOne(log);
+		collection.insertOne(doc);
 	}
 }

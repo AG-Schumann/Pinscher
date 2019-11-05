@@ -32,7 +32,7 @@ public class PidConfig extends BaseRichBolt {
 	@Override
 	public void execute(Tuple input) {
 
-		String type = input.getStringByField("type");
+		String topic = input.getStringByField("topic");
 		Double timestamp = input.getDoubleByField("timestamp");
 		String host = input.getStringByField("host");
 		String reading_name = input.getStringByField("reading_name");
@@ -42,14 +42,14 @@ public class PidConfig extends BaseRichBolt {
 		try {
         Document doc = new Document();
 		if (host.equals("")) {
-			doc = config_db.read(db_name, "readings", eq("name", reading_name));
+			doc = config_db.readOne(db_name, "readings", eq("name", reading_name));
 		} else {
-			doc = config_db.read(db_name, "readings", and(eq("name", reading_name), eq("host", host)));
+			doc = config_db.readOne(db_name, "readings", and(eq("name", reading_name), eq("host", host)));
 		}
         List<Document> alarms = (List<Document>) doc.get("alarms");
 		for (Document alarm : alarms) {
 			if (alarm.getString("type").equals("pid")) {
-				collector.emit(new Values(type, timestamp, host, reading_name,
+				collector.emit(new Values(topic, timestamp, host, reading_name,
 						input.getDoubleByField("value"), alarm.getDouble("a"), alarm.getDouble("b"),
 						alarm.getDouble("c"), alarm.getDouble("setpoint"),
 						alarm.getDouble("dt_integral"), alarm.getDouble("dt_differential"),
@@ -57,7 +57,7 @@ public class PidConfig extends BaseRichBolt {
 			}
 		}
         } catch (Exception e) {
-            
+            System.out.println("SOMETHING WENT WRONG");           
         } finally {
             collector.ack(input);
         }
@@ -65,7 +65,7 @@ public class PidConfig extends BaseRichBolt {
 
 	@Override
 	public void declareOutputFields(OutputFieldsDeclarer declarer) {
-		declarer.declare(new Fields("type", "timestamp", "host", "reading_name", "value", "a", "b", "c",
+		declarer.declare(new Fields("topic", "timestamp", "host", "reading_name", "value", "a", "b", "c",
 				"setpoint", "dt_int", "dt_diff", "levels", "recurrence", "key"));
 
 	}
