@@ -1,4 +1,4 @@
-package stormcontrol;
+package Greyhound;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.storm.Config;
@@ -18,7 +18,6 @@ import org.apache.storm.StormSubmitter;
 import static org.apache.storm.kafka.spout.FirstPollOffsetStrategy.LATEST;
 
 import java.util.concurrent.TimeUnit;
-import java.util.regex.Pattern;
 
 public class MainTopology {
 

@@ -1,4 +1,4 @@
-package stormcontrol;
+package Greyhound;
 import javax.script.ScriptEngineManager;
 import javax.script.ScriptEngine;
 import javax.script.ScriptException;
@@ -23,14 +23,6 @@ import org.influxdb.dto.Point;
 import org.influxdb.dto.Point.Builder;
 import org.influxdb.dto.Query;
 import org.influxdb.InfluxDBException.DatabaseNotFoundException;
-
-import com.mongodb.ConnectionString;
-import com.mongodb.MongoClientSettings;
-import com.mongodb.client.MongoClient;
-import com.mongodb.client.MongoClients;
-import com.mongodb.client.MongoCollection;
-import com.mongodb.client.MongoDatabase;
-
 import static com.mongodb.client.model.Filters.*;
 
 public class Buffer extends BaseWindowedBolt {
@@ -53,7 +45,7 @@ public class Buffer extends BaseWindowedBolt {
 	public void prepare(Map<String, Object> topoConf, TopologyContext context, OutputCollector collector) {
 		this.collector = collector;
 	    config_db = new ConfigDB();
-        String influx_server = config_db.read("settings", "experiment_config", eq("name", "influx"))
+        String influx_server = (String) config_db.readOne("settings", "experiment_config", eq("name", "influx"))
              .get("server");
         influx_db = InfluxDBFactory.connect(influx_server);
     }

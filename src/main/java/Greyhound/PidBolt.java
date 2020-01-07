@@ -1,4 +1,4 @@
-package stormcontrol;
+package Greyhound;
 
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
