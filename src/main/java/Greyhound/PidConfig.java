@@ -52,7 +52,7 @@ public class PidConfig extends BaseRichBolt {
 				collector.emit(new Values(topic, timestamp, host, reading_name,
 						input.getDoubleByField("value"), alarm.getDouble("a"), alarm.getDouble("b"),
 						alarm.getDouble("c"), alarm.getDouble("setpoint"),
-						alarm.getDouble("dt_integral"), alarm.getDouble("dt_differential"),
+						alarm.getDouble("dt_int"), alarm.getDouble("dt_diff"),
 						alarm.get("levels"), alarm.getDouble("recurrence"), key));
 			}
 		}

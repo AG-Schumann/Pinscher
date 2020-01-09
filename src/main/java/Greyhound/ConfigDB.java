@@ -18,12 +18,12 @@ public final class ConfigDB {
 
 	public ConfigDB() {
 		// where do I get this from?
-		String connection_string = "mongodb://webmonitor:42RKBu2QyeOUHkxOdHAhjfIpw1cgIQVgViO4U4nPr0s=@10.4.73.172:27010/admin";
+		String connection_string = System.getenv("DOBERMAN_CONNECTION_URI");
 		connect(connection_string);
 	}
 
 	public MongoCollection<Document> check(String db, String collection_name) {
-		String experiment_name = "pancake";
+		String experiment_name = System.getenv("DOBERMAN_EXPERIMENT_NAME");
 		String db_name = experiment_name + "_" + db;
         MongoDatabase database = mongoClient.getDatabase(db_name);
 		return database.getCollection(collection_name);
