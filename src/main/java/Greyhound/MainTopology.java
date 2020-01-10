@@ -21,8 +21,8 @@ import java.util.concurrent.TimeUnit;
 
 public class MainTopology {
 
-	private static final String[] topics = {"pressure", "voltage", "temperature", "current", "status",
-        "power", "level", "sysmon", "other" };
+	private static final String[] topics = { "pressure", "voltage", "temperature", "current", "status", "power",
+			"level", "sysmon", "other" };
 
 	public static void main(String[] args) {
 		String bootstrap_servers = "localhost:9092";
@@ -39,43 +39,44 @@ public class MainTopology {
 		// split the stream and ensure that all tuples of similar type go to exactly one
 		// buffer
 		tp.setBolt("StreamSplitter", new StreamSplitter()).shuffleGrouping("KafkaSpout");
-		tp.setBolt("Buffer", new Buffer().withWindow(new Duration(window_length, TimeUnit.SECONDS),
-				Count.of(1)), topics.length)
-            .directGrouping("StreamSplitter", "direct_stream");
+		tp.setBolt("Buffer", new Buffer().withWindow(new Duration(window_length, TimeUnit.SECONDS), Count.of(1)),
+				topics.length).directGrouping("StreamSplitter", "direct_stream");
 
 		// PID alarm
 		tp.setBolt("PidConfig", new PidConfig(), 5).shuffleGrouping("Buffer");
-		
-        tp.setBolt("PropBolt", new ProportionalBolt()).shuffleGrouping("PidConfig");
-		
-        tp.setBolt("IntBolt", new IntegralBolt()
-                .withWindow(new Duration(window_length, TimeUnit.SECONDS), Count.of(1)),5)
-            .fieldsGrouping("PidConfig", new Fields("host", "reading_name"));
-		
-        tp.setBolt("DiffBolt", new DifferentiatorBolt()
-                .withWindow(new Duration(window_length, TimeUnit.SECONDS), Count.of(1)), 5)
-            .fieldsGrouping("PidConfig", new Fields("host", "reading_name"));
-		
-        JoinBolt joinPid = new JoinBolt("PidConfig", "key").join("IntBolt", "key", "PidConfig")
+
+		tp.setBolt("PropBolt", new ProportionalBolt()).shuffleGrouping("PidConfig");
+
+		tp.setBolt("IntBolt", new IntegralBolt().withWindow(new Duration(window_length, TimeUnit.SECONDS), Count.of(1)),
+				5).fieldsGrouping("PidConfig", new Fields("host", "reading_name"));
+
+		tp.setBolt("DiffBolt",
+				new DifferentiatorBolt().withWindow(new Duration(window_length, TimeUnit.SECONDS), Count.of(1)), 5)
+				.fieldsGrouping("PidConfig", new Fields("host", "reading_name"));
+
+		JoinBolt joinPid = new JoinBolt("PidConfig", "key").join("IntBolt", "key", "PidConfig")
 				.join("DiffBolt", "key", "IntBolt").join("PropBolt", "key", "DiffBolt")
 				.select("topic, timestamp, host, reading_name, a, b, c, levels, recurrence,"
 						+ " integral, proportional, derivative")
 				.withTumblingWindow(new BaseWindowedBolt.Duration(5, TimeUnit.SECONDS));
 		tp.setBolt("JoinPid", joinPid, 5).fieldsGrouping("PidConfig", new Fields("key"))
-				.fieldsGrouping("IntBolt", new Fields("key"))
-                .fieldsGrouping("PropBolt", new Fields("key"))
+				.fieldsGrouping("IntBolt", new Fields("key")).fieldsGrouping("PropBolt", new Fields("key"))
 				.fieldsGrouping("DiffBolt", new Fields("key"));
 
 		tp.setBolt("PidBolt", new PidBolt()).shuffleGrouping("JoinPid");
-        
+		tp.setBolt("CheckPid", new CheckPid().withWindow(Count.of(max_recurrence), Count.of(1)), 5)
+				.fieldsGrouping("PidBolt", new Fields("reading_name"));
+
 		// Time Since alarm
 		tp.setBolt("TimeSinceConfig", new TimeSinceConfig(), 5).shuffleGrouping("Buffer");
-		tp.setBolt("TimeSinceBolt", new TimeSinceBolt()
-                .withWindow(new Duration(window_length, TimeUnit.SECONDS), Count.of(1)), 10)
-            .fieldsGrouping("TimeSinceConfig", new Fields("host", "reading_name"));
-        tp.setBolt("CheckAlarm", new CheckAlarm()
-                .withWindow(Count.of(max_recurrence)), 5)
-            .shuffleGrouping("PidBolt").shuffleGrouping("TimeSinceBolt");
+		tp.setBolt("TimeSinceBolt",
+				new TimeSinceBolt().withWindow(new Duration(window_length, TimeUnit.SECONDS), Count.of(1)), 10)
+				.fieldsGrouping("TimeSinceConfig", new Fields("host", "reading_name"));
+		tp.setBolt("CheckTimeSince", new CheckTimeSince(), 5).shuffleGrouping("TimeSinceBolt");
+
+		tp.setBolt("AlarmAggregator",
+				new AlarmAggregator().withWindow(new Duration(window_length, TimeUnit.SECONDS), Count.of(1)))
+				.shuffleGrouping("CheckPid", "CheckTimeSince");
 		// Submit topology to production cluster
 		try {
 			StormSubmitter.submitTopology("MainTopology", config, tp.createTopology());
@@ -86,13 +87,12 @@ public class MainTopology {
 
 	private static KafkaSpoutConfig<String, String> getKafkaSpoutConfig(String bootstrapServers) {
 		ByTopicRecordTranslator<String, String> trans = new ByTopicRecordTranslator<>(
-				(r) -> new Values(r.topic(), (double) r.timestamp(), "", decode(r.value())[0],
-                    decode(r.value())[1]),
+				(r) -> new Values(r.topic(), (double) r.timestamp(), "", decode(r.value())[0], decode(r.value())[1]),
 				new Fields("topic", "timestamp", "host", "reading_name", "value"));
-				trans.forTopic("sysmon",
-						(r) -> new Values(r.topic(), (double) r.timestamp(), decode(r.value())[0],
-                            decode(r.value())[1], decode(r.value())[2]),
-						new Fields("topic", "timestamp", "host", "reading_name", "value"));
+		trans.forTopic(
+				"sysmon", (r) -> new Values(r.topic(), (double) r.timestamp(), decode(r.value())[0],
+						decode(r.value())[1], decode(r.value())[2]),
+				new Fields("topic", "timestamp", "host", "reading_name", "value"));
 
 		return KafkaSpoutConfig.builder(bootstrapServers, topics)
 				.setProp(ConsumerConfig.GROUP_ID_CONFIG, "kafkaSpoutTestGroup").setRetry(getRetryService())
