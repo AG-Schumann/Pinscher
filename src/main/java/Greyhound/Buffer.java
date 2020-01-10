@@ -40,7 +40,7 @@ public class Buffer extends BaseWindowedBolt {
 	private ConfigDB config_db;
 	private Double last_emit = (double) System.currentTimeMillis();
     private InfluxDB influx_db;
-    private String experiment_name = System.getenv("DOBERMAN_EXPERIMENT_NAME");
+    private String experiment_name = "pancake";
 	@Override
 	public void prepare(Map<String, Object> topoConf, TopologyContext context, OutputCollector collector) {
 		this.collector = collector;
