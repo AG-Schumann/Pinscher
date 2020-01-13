@@ -31,18 +31,22 @@ public class IntegralBolt extends BaseWindowedBolt {
 
 		List<Tuple> tuples = inputWindow.get();
 		Tuple tu = tuples.get(tuples.size() - 1);
+		String this_name = tu.getStringByField("reading_name");
+		String this_host = tu.getStringByField("host");
 		Double setpoint = tu.getDoubleByField("setpoint");
-        double integral = 0.0;
+		double integral = 0.0;
 		// create lists of timestamps and values in window from now to now - delta_t
 		List<Double> timestamps = new ArrayList<Double>();
 		List<Double> values = new ArrayList<Double>();
-        Double delta_t = tu.getDoubleByField("dt_int");
+		Double delta_t = tu.getDoubleByField("dt_int");
 		Double t0 = System.currentTimeMillis() - delta_t * 1000;
 		for (Tuple tuple : tuples) {
-			Double t = tuple.getDoubleByField("timestamp");
-			if (t >= t0) {
-				timestamps.add(t / 1000);
-				values.add(tuple.getDoubleByField("value") - setpoint);
+			if (tuple.getStringByField("reading_name") == this_name && tuple.getStringByField("host") == this_host) {
+				Double t = tuple.getDoubleByField("timestamp");
+				if (t >= t0) {
+					timestamps.add(t / 1000);
+					values.add(tuple.getDoubleByField("value") - setpoint);
+				}
 			}
 		}
 		// integral from t0 to first data point in window
@@ -50,10 +54,9 @@ public class IntegralBolt extends BaseWindowedBolt {
 
 		// integral over the data points (trapezoidal rule)
 		for (int i = 0; i < timestamps.size() - 1; ++i) {
-			integral += 0.5 * (timestamps.get(i + 1) - timestamps.get(i))
-					* (values.get(i + 1) + values.get(i));
+			integral += 0.5 * (timestamps.get(i + 1) - timestamps.get(i)) * (values.get(i + 1) + values.get(i));
 		}
-        collector.emit(new Values(integral, tu.getStringByField("key")));
+		collector.emit(new Values(integral, tu.getStringByField("key")));
 
 	}
 

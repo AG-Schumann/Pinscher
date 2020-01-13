@@ -73,10 +73,19 @@ public class MainTopology {
 				new TimeSinceBolt().withWindow(new Duration(window_length, TimeUnit.SECONDS), Count.of(1)), 10)
 				.fieldsGrouping("TimeSinceConfig", new Fields("host", "reading_name"));
 		tp.setBolt("CheckTimeSince", new CheckTimeSince(), 5).shuffleGrouping("TimeSinceBolt");
+		
+		// Simple alarm
+		tp.setBolt("SimpleConfig", new SimpleConfig(), 5).shuffleGrouping("Buffer");
+		tp.setBolt("CheckSimple", new CheckSimple().withWindow(Count.of(max_recurrence), Count.of(1)), 5)
+				.fieldsGrouping("SimpleConfig", new Fields("reading_name"));
 
 		tp.setBolt("AlarmAggregator",
 				new AlarmAggregator().withWindow(new Duration(window_length, TimeUnit.SECONDS), Count.of(1)))
-				.shuffleGrouping("CheckPid", "CheckTimeSince");
+				.shuffleGrouping("CheckPid")
+				.shuffleGrouping("CheckTimeSince")
+				.shuffleGrouping("CheckSimple");
+		tp.setBolt("LogAlarm", new LogAlarm()).shuffleGrouping("AlarmAggregator");
+		
 		// Submit topology to production cluster
 		try {
 			StormSubmitter.submitTopology("MainTopology", config, tp.createTopology());

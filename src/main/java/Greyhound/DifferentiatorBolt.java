@@ -22,8 +22,7 @@ public class DifferentiatorBolt extends BaseWindowedBolt {
 	private OutputCollector collector;
 
 	@Override
-	public void prepare(Map<String, Object> topoConf, TopologyContext context, 
-            OutputCollector collector) {
+	public void prepare(Map<String, Object> topoConf, TopologyContext context, OutputCollector collector) {
 		this.collector = collector;
 	}
 
@@ -32,16 +31,20 @@ public class DifferentiatorBolt extends BaseWindowedBolt {
 
 		List<Tuple> tuples = inputWindow.get();
 		Tuple tu = tuples.get(tuples.size() - 1);
+		String this_name = tu.getStringByField("reading_name");
+		String this_host = tu.getStringByField("host");
 		double B = 0, C = 0, D = 0, E = 0, F = 0;
 		List<Double> timestamps = new ArrayList<Double>();
-        Double delta_t = tu.getDoubleByField("dt_diff");
+		Double delta_t = tu.getDoubleByField("dt_diff");
 		Double t0 = System.currentTimeMillis() - delta_t * 1000;
 		List<Double> values = new ArrayList<Double>();
-        for (Tuple tuple : tuples) {
-			Double t = tuple.getDoubleByField("timestamp");
-			if (t >= t0) {
-				timestamps.add(t);
-                values.add(tuple.getDoubleByField("value"));
+		for (Tuple tuple : tuples) {
+			if (tuple.getStringByField("reading_name") == this_name && tuple.getStringByField("host") == this_host) {
+				Double t = tuple.getDoubleByField("timestamp");
+				if (t >= t0) {
+					timestamps.add(t);
+					values.add(tuple.getDoubleByField("value"));
+				}
 			}
 		}
 		for (int i = 0; i < timestamps.size() - 1; ++i) {

@@ -49,6 +49,10 @@ public class CheckTimeSince extends BaseRichBolt {
 		}
 		if (howBad > -1.) {
 			List<Double> additional_parameters = new ArrayList<Double>();
+			additional_parameters.add(input.getDoubleByField("value"));
+			additional_parameters.add(input.getDoubleByField("lower_threshold"));
+			additional_parameters.add(input.getDoubleByField("upper_threshold"));
+			additional_parameters.add(max_duration.get(howBad.intValue()));
 			collector.emit(new Values(input.getStringByField("topic"), input.getDoubleByField("timestamp"),
 					input.getStringByField("host"), input.getStringByField("reading_name"), "timesince", howBad,
 					additional_parameters));

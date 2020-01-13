@@ -13,8 +13,7 @@ import org.apache.storm.tuple.Tuple;
 import org.apache.storm.tuple.Values;
 import org.apache.storm.windowing.TupleWindow;
 
-public class CheckPid extends BaseWindowedBolt {
-
+public class CheckSimple extends BaseWindowedBolt {
 	/**
 	 * 
 	 */
@@ -61,11 +60,11 @@ public class CheckPid extends BaseWindowedBolt {
 		}
 		for (int j = 0; j < lower_threshold.size(); ++j) {
 			int recurrence = 0;
-			// check if values are inside threshold of level j for tuples from newest to
+			// check if values are iniside threshold of level j for tuples from newest to
 			// oldest
 			for (int i = these_tuples.size() - 1; i >= 0; --i) {
-				Double pid = these_tuples.get(i).getDoubleByField("pid");
-				if (pid < lower_threshold.get(j) || pid > upper_threshold.get(j)) {
+				Double value = these_tuples.get(i).getDoubleByField("value");
+				if (value < lower_threshold.get(j) || value > upper_threshold.get(j)) {
 					recurrence += 1;
 					if (recurrence >= max_recurrence) {
 						howBad += 1.;
@@ -82,14 +81,13 @@ public class CheckPid extends BaseWindowedBolt {
 			additional_parameters.add(lower_threshold.get(howBad.intValue()));
 			additional_parameters.add(upper_threshold.get(howBad.intValue()));
 			collector.emit(new Values(tu.getStringByField("topic"), tu.getDoubleByField("timestamp"),
-					tu.getStringByField("host"), tu.getStringByField("reading_name"), "pid", howBad, additional_parameters));
+					tu.getStringByField("host"), tu.getStringByField("reading_name"), "simple", howBad, additional_parameters));
 		}
+		
 	}
-
 	@Override
 	public void declareOutputFields(OutputFieldsDeclarer declarer) {
 		declarer.declare(
 				new Fields("topic", "timestamp", "host", "reading_name", "alarm_type", "howBad", "additional_parameters"));
 	}
-
 }
