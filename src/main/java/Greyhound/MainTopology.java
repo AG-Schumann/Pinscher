@@ -38,9 +38,8 @@ public class MainTopology {
 		tp.setSpout("KafkaSpout", new KafkaSpout<>(getKafkaSpoutConfig(bootstrap_servers)));
 		// split the stream and ensure that all tuples of similar type go to exactly one
 		// buffer
-		tp.setBolt("StreamSplitter", new StreamSplitter()).shuffleGrouping("KafkaSpout");
 		tp.setBolt("Buffer", new Buffer().withWindow(new Duration(window_length, TimeUnit.SECONDS), Count.of(1)),
-				topics.length).directGrouping("StreamSplitter", "direct_stream");
+				topics.length).fieldsGrouping("KafkaSpout", new Fields("topic"));
 
 		// PID alarm
 		tp.setBolt("PidConfig", new PidConfig(), 5).shuffleGrouping("Buffer");
@@ -70,7 +69,7 @@ public class MainTopology {
 		// Time Since alarm
 		tp.setBolt("TimeSinceConfig", new TimeSinceConfig(), 5).shuffleGrouping("Buffer");
 		tp.setBolt("TimeSinceBolt",
-				new TimeSinceBolt().withWindow(new Duration(window_length, TimeUnit.SECONDS), Count.of(1)), 10)
+				new TimeSinceBolt().withWindow(new Duration(window_length, TimeUnit.SECONDS), Count.of(1)), 5)
 				.fieldsGrouping("TimeSinceConfig", new Fields("host", "reading_name"));
 		tp.setBolt("CheckTimeSince", new CheckTimeSince(), 5).shuffleGrouping("TimeSinceBolt");
 		
@@ -78,12 +77,13 @@ public class MainTopology {
 		tp.setBolt("SimpleConfig", new SimpleConfig(), 5).shuffleGrouping("Buffer");
 		tp.setBolt("CheckSimple", new CheckSimple().withWindow(Count.of(max_recurrence), Count.of(1)), 5)
 				.fieldsGrouping("SimpleConfig", new Fields("reading_name"));
-
 		tp.setBolt("AlarmAggregator",
-				new AlarmAggregator().withWindow(new Duration(window_length, TimeUnit.SECONDS), Count.of(1)))
+	    		new AlarmAggregator()
+              .withWindow(new Duration(window_length, TimeUnit.SECONDS), Count.of(1)))
 				.shuffleGrouping("CheckPid")
-				.shuffleGrouping("CheckTimeSince")
-				.shuffleGrouping("CheckSimple");
+			    .shuffleGrouping("CheckTimeSince")
+			    .shuffleGrouping("CheckSimple");
+
 		tp.setBolt("LogAlarm", new LogAlarm()).shuffleGrouping("AlarmAggregator");
 		
 		// Submit topology to production cluster

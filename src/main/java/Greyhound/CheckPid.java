@@ -78,7 +78,7 @@ public class CheckPid extends BaseWindowedBolt {
 		}
 		if (howBad > -1.) {
 			List<Double> additional_parameters = new ArrayList<Double>();
-			additional_parameters.add(tu.getDoubleByField("value"));
+			additional_parameters.add(tu.getDoubleByField("pid"));
 			additional_parameters.add(lower_threshold.get(howBad.intValue()));
 			additional_parameters.add(upper_threshold.get(howBad.intValue()));
 			collector.emit(new Values(tu.getStringByField("topic"), tu.getDoubleByField("timestamp"),

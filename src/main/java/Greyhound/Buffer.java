@@ -53,7 +53,14 @@ public class Buffer extends BaseWindowedBolt {
 	@Override
 	public void execute(TupleWindow inputWindow) {
 		List<Tuple> tuples = inputWindow.get();
-        String topic = tuples.get(0).getStringByField("topic");
+        Tuple tu = tuples.get(tuples.size() - 1);
+        String topic = tu.getStringByField("topic");
+        List<Tuple> these_tuples = new ArrayList<Tuple>();
+        for (Tuple tuple : tuples) {
+           if (tuple.getStringByField("topic").equals(topic)) {
+              these_tuples.add(tuple);
+           }
+        } 
         Double commit_interval = getCommitInterval(topic);
         Double min_readout_interval = getMinReadoutInterval(topic);
         // try to prevent weird stuff from happening...
@@ -64,7 +71,7 @@ public class Buffer extends BaseWindowedBolt {
 		if ((double) System.currentTimeMillis() - last_emit >= commit_interval - min_readout_interval) {
             // create a map of keys (<reading_name>,<host>) and the corresponding tuples
             Map<String,List<Tuple>> map = new HashMap<String,List<Tuple>>();
-			for (Tuple tuple : tuples) {
+			for (Tuple tuple : these_tuples) {
 				if (tuple.getDoubleByField("timestamp") >= last_emit) {
                     String key = tuple.getStringByField("reading_name") +","+ tuple.getStringByField("host");
                     if (!map.containsKey(key)) {
