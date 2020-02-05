@@ -49,15 +49,17 @@ public class IntegralBolt extends BaseWindowedBolt {
 				}
 			}
 		}
-		// integral from t0 to first data point in window
-		integral += (timestamps.get(0) - t0 / 1000) * values.get(0);
 
-		// integral over the data points (trapezoidal rule)
-		for (int i = 0; i < timestamps.size() - 1; ++i) {
-			integral += 0.5 * (timestamps.get(i + 1) - timestamps.get(i)) * (values.get(i + 1) + values.get(i));
+		if (timestamps.size() > 0 && values.size() > 0) {
+			// integral from t0 to first data point in window
+			integral += (timestamps.get(0) - t0 / 1000) * values.get(0);
+
+			// integral over the data points (trapezoidal rule)
+			for (int i = 0; i < timestamps.size() - 1; ++i) {
+				integral += 0.5 * (timestamps.get(i + 1) - timestamps.get(i)) * (values.get(i + 1) + values.get(i));
+			}
+			collector.emit(new Values(integral, tu.getStringByField("key")));
 		}
-		collector.emit(new Values(integral, tu.getStringByField("key")));
-
 	}
 
 	@Override

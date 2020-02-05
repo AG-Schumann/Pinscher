@@ -25,7 +25,7 @@ public class MainTopology {
 			"level", "sysmon", "other" };
 
 	public static void main(String[] args) {
-		String bootstrap_servers = "localhost:9092";
+		String bootstrap_servers = "192.168.131.3:9092";
 		int window_length = 600;
 		int max_recurrence = 50;
 		Config config = new Config();

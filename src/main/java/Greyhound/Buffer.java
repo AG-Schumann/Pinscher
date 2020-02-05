@@ -24,7 +24,7 @@ import org.influxdb.dto.Point.Builder;
 import org.influxdb.dto.Query;
 import org.influxdb.InfluxDBException.DatabaseNotFoundException;
 import static com.mongodb.client.model.Filters.*;
-
+import java.util.concurrent.TimeUnit;
 public class Buffer extends BaseWindowedBolt {
 	/**
      * Each buffer recieves tuples from exactly one topic. It fetches the defined
@@ -39,80 +39,42 @@ public class Buffer extends BaseWindowedBolt {
 	private OutputCollector collector;
 	private ConfigDB config_db;
 	private Double last_emit = (double) System.currentTimeMillis();
-    private InfluxDB influx_db;
-    private String experiment_name = "pancake";
+    	private InfluxDB influx_db;
+    	private String experiment_name = "xebra";
+	
 	@Override
 	public void prepare(Map<String, Object> topoConf, TopologyContext context, OutputCollector collector) {
-		this.collector = collector;
-	    config_db = new ConfigDB();
+	
+	this.collector = collector;
+	config_db = new ConfigDB();
         String influx_server = (String) config_db.readOne("settings", "experiment_config", eq("name", "influx"))
              .get("server");
         influx_db = InfluxDBFactory.connect(influx_server);
-    }
+    	}
 
 	@Override
 	public void execute(TupleWindow inputWindow) {
-		List<Tuple> tuples = inputWindow.get();
-        Tuple tu = tuples.get(tuples.size() - 1);
-        String topic = tu.getStringByField("topic");
-        List<Tuple> these_tuples = new ArrayList<Tuple>();
-        for (Tuple tuple : tuples) {
-           if (tuple.getStringByField("topic").equals(topic)) {
-              these_tuples.add(tuple);
-           }
-        } 
-        Double commit_interval = getCommitInterval(topic);
-        Double min_readout_interval = getMinReadoutInterval(topic);
-        // try to prevent weird stuff from happening...
-        if (min_readout_interval.equals(commit_interval)) {
-            min_readout_interval = 0.0;
-        }
-		// only do this if last emit is more than one commit interval - minimal readout interval  away
-		if ((double) System.currentTimeMillis() - last_emit >= commit_interval - min_readout_interval) {
-            // create a map of keys (<reading_name>,<host>) and the corresponding tuples
-            Map<String,List<Tuple>> map = new HashMap<String,List<Tuple>>();
-			for (Tuple tuple : these_tuples) {
-				if (tuple.getDoubleByField("timestamp") >= last_emit) {
-                    String key = tuple.getStringByField("reading_name") +","+ tuple.getStringByField("host");
-                    if (!map.containsKey(key)) {
-                        map.put(key, new ArrayList<Tuple>());
-                    }
-                    map.get(key).add(tuple);
-                }
-            }
-            // calculate mean value of all tuples for each key
-            Map<String, Double> results = new HashMap<String, Double>();
-            for (String this_key : map.keySet()) {
-                double mean = .0;
-                for(Tuple tuple : map.get(this_key)) {
-                    mean += Double.valueOf(tuple.getStringByField("value"));
-                }
-                mean /= map.get(this_key).size();
-                results.put(this_key, mean);
 
-            }
-            results = addCombinedReadings(topic, results);
+	List<Tuple> tuples = inputWindow.get();
+        if (tuples.size() >= 1) {
+		Tuple tu = tuples.get(tuples.size() - 1);
+        	//results = addCombinedReadings(tuples);
+		WriteToStorage(tu);
+		collector.emit(new Values(tu.getStringByField("topic"), tu.getDoubleByField("timestamp"),
+					tu.getStringByField("host"), tu.getStringByField("reading_name"),
+					Double.parseDouble(tu.getStringByField("value")))); 
+	}
+	}
 
-            // wait until last commit is "exactly" one commit interval away
-            while((double) System.currentTimeMillis() - last_emit < commit_interval) {
-                Utils.sleep(min_readout_interval.longValue() / 100);
-            }
-            if(results.size() > 0) {
-			    WriteToStorage(topic, results);
-            }
-			last_emit = (double) System.currentTimeMillis();
-            for(String key : results.keySet()) {
-                collector.emit(new Values(topic, last_emit, key.split(",",2)[1],key.split(",",2)[0],
-                            results.get(key))); 
-            }
-        }
-    }
 
-    private Map<String, Double> addCombinedReadings(String topic, Map<String, Double> results) {
+/*private Map<String, Double> addCombinedReadings(List<Tuple> tuples) {
             
             List<Document> cobined = config_db.readMany("settings", "readings", 
                     and(eq("sensor", "storm"), eq("topic", topic)));
-            for (Document combined_reading : cobined) {
+          
+	    for (Tuple tuple : tuples) {
+		
+	    for (Document combined_reading : cobined) {
                 String operation = (String) combined_reading.get("operation");
                 // replace names of single_readings with the current (mean) value
                 // operation can either contain '<reading_name>,<host>' or just '<reading_name>' for 
@@ -137,25 +99,26 @@ public class Buffer extends BaseWindowedBolt {
             }
             return results;
     }
-
-	private void WriteToStorage(String topic, Map<String, Double> results) {
-        Builder point = Point.measurement(topic);
-		for (String key : results.keySet()) {
-			String[] id = key.split(",", -1); 
-            point.addField(id[0], results.get(key));
-			String host = id[1];
-            if (!host.equals("")) {
-			    point.tag("host", host);
-			}
-		}
+*/	
+	private void WriteToStorage(Tuple tu) {
+	
+	String topic = tu.getStringByField("topic");
+	Double value = Double.parseDouble(tu.getStringByField("value"));
+	Double timestamp = tu.getDoubleByField("timestamp");
+	Builder point = Point.measurement(topic).time(timestamp.longValue(), TimeUnit.MILLISECONDS);
+	point.addField(tu.getStringByField("reading_name"), value);
+	String host = tu.getStringByField("host");
+        if (!host.equals("")) {
+		point.tag("host", host);
+	}
         try {
             influx_db.setDatabase(experiment_name);
-		    influx_db.write(point.build());
+	    influx_db.write(point.build());
         } catch (DatabaseNotFoundException e) {
             influx_db.query(new Query("CREATE DATABASE " + experiment_name));
             influx_db.setDatabase(experiment_name);
             influx_db.write(point.build());
-        }
+	}
 	}
     
     private double getCommitInterval(String topic) {
