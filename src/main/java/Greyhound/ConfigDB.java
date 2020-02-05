@@ -17,17 +17,16 @@ import com.mongodb.client.MongoDatabase;
 
 public final class ConfigDB {
 	private MongoClient mongoClient;
+	private String experiment_name;
 
-	public ConfigDB() {
-		// where do I get this from?
-		String connection_string =  "mongodb://webmonitor:42RKBu2QyeOUHkxOdHAhjfIpw1cgIQVgViO4U4nPr0s=@192.168.131.2:27017/admin";
-		connect(connection_string);
+	public ConfigDB(String connection_uri, String experiment_name) {
+		this.experiment_name = experiment_name;
+		connect(connection_uri);
 	}
 
 	public MongoCollection<Document> check(String db, String collection_name) {
-		String experiment_name = "xebra";
 		String db_name = experiment_name + "_" + db;
-        MongoDatabase database = mongoClient.getDatabase(db_name);
+        	MongoDatabase database = mongoClient.getDatabase(db_name);
 		return database.getCollection(collection_name);
 	}
 

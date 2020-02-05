@@ -40,14 +40,19 @@ public class Buffer extends BaseWindowedBolt {
 	private ConfigDB config_db;
 	private Double last_emit = (double) System.currentTimeMillis();
     	private InfluxDB influx_db;
-    	private String experiment_name = "xebra";
-	
+    	private String experiment_name = new String();
+	private String mongo_uri = new String();
+	private Map<String,Object> env = new HashMap<String,Object>();
+
 	@Override
 	public void prepare(Map<String, Object> topoConf, TopologyContext context, OutputCollector collector) {
 	
 	this.collector = collector;
-	config_db = new ConfigDB();
-        String influx_server = (String) config_db.readOne("settings", "experiment_config", eq("name", "influx"))
+
+	experiment_name = (String) topoConf.get("EXPERIMENT_NAME");
+	mongo_uri = (String) topoConf.get("MONGO_CONNECTION_URI");
+        config_db = new ConfigDB(mongo_uri, experiment_name);
+	String influx_server = (String) config_db.readOne("settings", "experiment_config", eq("name", "influx"))
              .get("server");
         influx_db = InfluxDBFactory.connect(influx_server);
     	}

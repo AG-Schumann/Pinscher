@@ -28,7 +28,9 @@ public class AlarmAggregator extends BaseWindowedBolt {
 	@Override
 	public void prepare(Map<String, Object> topoConf, TopologyContext context, OutputCollector collector) {
 		this.collector = collector;
-		config_db = new ConfigDB();
+		String experiment_name = (String) topoConf.get("EXPERIMENT_NAME");
+        	String mongo_uri = (String) topoConf.get("MONGO_CONNECTION_URI");
+        	config_db = new ConfigDB(mongo_uri, experiment_name);
 	}
 
 	@Override

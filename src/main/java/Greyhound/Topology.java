@@ -24,25 +24,28 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
-public class MainTopology {
+public class Topology {
 		
 	private static ConfigDB config_db;
 
 	public static void main(String[] args) {
-		config_db = new ConfigDB();
+
+		String mongo_uri = args[0];
+		String experiment_name = args[1];
+		Map<String, Object> config = new HashMap<String,Object>();
+		config.put("MONGO_CONNECTION_URI", mongo_uri);
+                config.put("EXPERIMENT_NAME", experiment_name);
+		config_db = new ConfigDB(mongo_uri, experiment_name);
 		String bootstrap_servers = (String) config_db.readOne("settings", "experiment_config", eq("name", "kafka"))
 	             .get("bootstrap_servers");;
 		int window_length = 600;
 		int max_recurrence = 50;
-		Map<String, Object> env = new HashMap<String,Object>();
-		env.put("MONGO_CONNECTION_URI", "mongodb://webmonitor:42RKBu2QyeOUHkxOdHAhjfIpw1cgIQVgViO4U4nPr0s=@192.168.131.2:27017/admin");
-		env.put("EXPERIMENT_NAME", "xebra");
-		Config config = new Config();
-		config.setMessageTimeoutSecs(666);
-		config.setNumWorkers(1);
+		
+		config.put(Config.TOPOLOGY_MESSAGE_TIMEOUT_SECS, 666);
+/*		config.setNumWorkers(1);
 		config.setDebug(true);
 		config.setEnvironment(env);
-
+*/
 		TopologyBuilder tp = new TopologyBuilder();
 		// KafkaSpout emits tuples to streams named after their topics
 		tp.setSpout("KafkaSpout", new KafkaSpout<>(getKafkaSpoutConfig(bootstrap_servers)));
@@ -50,7 +53,7 @@ public class MainTopology {
 		// buffer
 		tp.setBolt("Buffer", new Buffer().withWindow(new Duration(window_length, TimeUnit.SECONDS), Count.of(1)),
 				5).fieldsGrouping("KafkaSpout", new Fields("topic"));
-
+/*
 		// PID alarm
 		tp.setBolt("PidConfig", new PidConfig(), 5).shuffleGrouping("Buffer");
 
@@ -95,9 +98,9 @@ public class MainTopology {
 			    .shuffleGrouping("CheckSimple");
 
 		tp.setBolt("LogAlarm", new LogAlarm()).shuffleGrouping("AlarmAggregator");
-		
+*/		
 		// Submit topology to production cluster
-		String topology_name = config.TOPOLOGY_ENVIRONMENT + "Topology";
+		String topology_name = experiment_name;
 		try {
 			StormSubmitter.submitTopology(topology_name, config, tp.createTopology());
 		} catch (Exception e) {
