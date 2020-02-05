@@ -15,23 +15,33 @@ import org.apache.storm.topology.base.BaseWindowedBolt.Duration;
 import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Values;
 import org.apache.storm.StormSubmitter;
+
+import static com.mongodb.client.model.Filters.eq;
 import static org.apache.storm.kafka.spout.FirstPollOffsetStrategy.LATEST;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 
 public class MainTopology {
-
-	private static final String[] topics = { "pressure", "voltage", "temperature", "current", "status", "power",
-			"level", "sysmon", "other" };
+		
+	private static ConfigDB config_db;
 
 	public static void main(String[] args) {
-		String bootstrap_servers = "192.168.131.3:9092";
+		config_db = new ConfigDB();
+		String bootstrap_servers = (String) config_db.readOne("settings", "experiment_config", eq("name", "kafka"))
+	             .get("bootstrap_server");;
 		int window_length = 600;
 		int max_recurrence = 50;
+		Map<String, Object> env = new HashMap<String,Object>();
+		env.put("MONGO_CONNECTION_URI", "mongodb://webmonitor:42RKBu2QyeOUHkxOdHAhjfIpw1cgIQVgViO4U4nPr0s=@192.168.131.2:27017/admin");
+		env.put("EXPERIMENT_NAME", "xebra");
 		Config config = new Config();
 		config.setMessageTimeoutSecs(666);
 		config.setNumWorkers(1);
 		config.setDebug(true);
+		config.setEnvironment(env);
 
 		TopologyBuilder tp = new TopologyBuilder();
 		// KafkaSpout emits tuples to streams named after their topics
@@ -39,7 +49,7 @@ public class MainTopology {
 		// split the stream and ensure that all tuples of similar type go to exactly one
 		// buffer
 		tp.setBolt("Buffer", new Buffer().withWindow(new Duration(window_length, TimeUnit.SECONDS), Count.of(1)),
-				topics.length).fieldsGrouping("KafkaSpout", new Fields("topic"));
+				5).fieldsGrouping("KafkaSpout", new Fields("topic"));
 
 		// PID alarm
 		tp.setBolt("PidConfig", new PidConfig(), 5).shuffleGrouping("Buffer");
@@ -87,6 +97,7 @@ public class MainTopology {
 		tp.setBolt("LogAlarm", new LogAlarm()).shuffleGrouping("AlarmAggregator");
 		
 		// Submit topology to production cluster
+		//String topology_name = config.TOPOLOGY_ENVIRONMENT.get("EXPERIMENT_NAME") + "Topology";
 		try {
 			StormSubmitter.submitTopology("MainTopology", config, tp.createTopology());
 		} catch (Exception e) {
@@ -103,7 +114,7 @@ public class MainTopology {
 						decode(r.value())[1], decode(r.value())[2]),
 				new Fields("topic", "timestamp", "host", "reading_name", "value"));
 
-		return KafkaSpoutConfig.builder(bootstrapServers, topics)
+		return KafkaSpoutConfig.builder(bootstrapServers, Pattern.compile("*"))
 				.setProp(ConsumerConfig.GROUP_ID_CONFIG, "kafkaSpoutTestGroup").setRetry(getRetryService())
 				.setRecordTranslator(trans).setOffsetCommitPeriodMs(10_000).setFirstPollOffsetStrategy(LATEST)
 				.setMaxUncommittedOffsets(2000).build();
