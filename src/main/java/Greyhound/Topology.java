@@ -29,9 +29,14 @@ public class Topology {
 	private static ConfigDB config_db;
 
 	public static void main(String[] args) {
-
-		String mongo_uri = args[0];
-		String experiment_name = args[1];
+		String mongo_uri = new String();
+		String experiment_name = new String();
+		try {
+			mongo_uri = args[0];
+			experiment_name = args[1];
+		} catch(ArrayIndexOutOfBoundsException e) {
+			System.out.println("Topology requires two arguments: MONGO_URI, EXPERIMENT_NAME");
+		}
 		Map<String, Object> config = new HashMap<String,Object>();
 		config.put("MONGO_CONNECTION_URI", mongo_uri);
                 config.put("EXPERIMENT_NAME", experiment_name);
@@ -53,7 +58,7 @@ public class Topology {
 		// buffer
 		tp.setBolt("Buffer", new Buffer().withWindow(new Duration(window_length, TimeUnit.SECONDS), Count.of(1)),
 				5).fieldsGrouping("KafkaSpout", new Fields("topic"));
-/*
+
 		// PID alarm
 		tp.setBolt("PidConfig", new PidConfig(), 5).shuffleGrouping("Buffer");
 
@@ -98,11 +103,10 @@ public class Topology {
 			    .shuffleGrouping("CheckSimple");
 
 		tp.setBolt("LogAlarm", new LogAlarm()).shuffleGrouping("AlarmAggregator");
-*/		
+		
 		// Submit topology to production cluster
-		String topology_name = experiment_name;
 		try {
-			StormSubmitter.submitTopology(topology_name, config, tp.createTopology());
+			StormSubmitter.submitTopology(experiment_name, config, tp.createTopology());
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
