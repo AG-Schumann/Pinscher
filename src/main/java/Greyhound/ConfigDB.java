@@ -2,6 +2,8 @@ package Greyhound;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import org.apache.storm.Config;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 
@@ -18,7 +20,7 @@ public final class ConfigDB {
 
 	public ConfigDB() {
 		// where do I get this from?
-		String connection_string = "mongodb://webmonitor:42RKBu2QyeOUHkxOdHAhjfIpw1cgIQVgViO4U4nPr0s=@192.168.131.2:27017/admin";
+		String connection_string =  "mongodb://webmonitor:42RKBu2QyeOUHkxOdHAhjfIpw1cgIQVgViO4U4nPr0s=@192.168.131.2:27017/admin";
 		connect(connection_string);
 	}
 

@@ -31,7 +31,7 @@ public class MainTopology {
 	public static void main(String[] args) {
 		config_db = new ConfigDB();
 		String bootstrap_servers = (String) config_db.readOne("settings", "experiment_config", eq("name", "kafka"))
-	             .get("bootstrap_server");;
+	             .get("bootstrap_servers");;
 		int window_length = 600;
 		int max_recurrence = 50;
 		Map<String, Object> env = new HashMap<String,Object>();
@@ -97,9 +97,9 @@ public class MainTopology {
 		tp.setBolt("LogAlarm", new LogAlarm()).shuffleGrouping("AlarmAggregator");
 		
 		// Submit topology to production cluster
-		//String topology_name = config.TOPOLOGY_ENVIRONMENT.get("EXPERIMENT_NAME") + "Topology";
+		String topology_name = config.TOPOLOGY_ENVIRONMENT + "Topology";
 		try {
-			StormSubmitter.submitTopology("MainTopology", config, tp.createTopology());
+			StormSubmitter.submitTopology(topology_name, config, tp.createTopology());
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -114,7 +114,7 @@ public class MainTopology {
 						decode(r.value())[1], decode(r.value())[2]),
 				new Fields("topic", "timestamp", "host", "reading_name", "value"));
 
-		return KafkaSpoutConfig.builder(bootstrapServers, Pattern.compile("*"))
+		return KafkaSpoutConfig.builder(bootstrapServers, Pattern.compile("((?!__).)*"))
 				.setProp(ConsumerConfig.GROUP_ID_CONFIG, "kafkaSpoutTestGroup").setRetry(getRetryService())
 				.setRecordTranslator(trans).setOffsetCommitPeriodMs(10_000).setFirstPollOffsetStrategy(LATEST)
 				.setMaxUncommittedOffsets(2000).build();
