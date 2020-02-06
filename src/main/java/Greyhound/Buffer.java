@@ -111,14 +111,19 @@ public class Buffer extends BaseWindowedBolt {
 		try {
 			ScriptEngineManager mgr = new ScriptEngineManager();
 			ScriptEngine engine = mgr.getEngineByName("JavaScript");
-			this_result = (Double) engine.eval(operation);
+			Object eval = engine.eval(operation);
+			if (eval instanceof Double) {
+				this_result = (Double) eval;
+			} else if (eval instanceof Integer) {
+				this_result = ((Integer)eval).doubleValue();
+			}
 			String host = "";
 			if (combined_reading.containsKey("host")) {
 				host = combined_reading.getString("host");
 			}
 			String topic = combined_reading.getString("topic");
 			Double timestamp = (double) System.currentTimeMillis();
-			String reading_name = combined_reading.getString("reading_name");
+			String reading_name = combined_reading.getString("name");
 			WriteToStorage(topic, timestamp, host, reading_name, this_result);
 			collector.emit(new Values(topic, timestamp, host, reading_name, this_result));
 		} catch (ScriptException e) {
