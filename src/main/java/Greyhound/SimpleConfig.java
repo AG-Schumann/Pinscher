@@ -25,9 +25,9 @@ public class SimpleConfig extends BaseRichBolt {
 	@Override
 	public void prepare(Map<String, Object> topoConf, TopologyContext context, OutputCollector collector) {
 		this.collector = collector;
-        	String experiment_name = (String) topoConf.get("EXPERIMENT_NAME");
-        	String mongo_uri = (String) topoConf.get("MONGO_CONNECTION_URI");
-        	config_db = new ConfigDB(mongo_uri, experiment_name);	
+		String experiment_name = (String) topoConf.get("EXPERIMENT_NAME");
+		String mongo_uri = (String) topoConf.get("MONGO_CONNECTION_URI");
+		config_db = new ConfigDB(mongo_uri, experiment_name);
 	}
 
 	@Override
@@ -49,8 +49,8 @@ public class SimpleConfig extends BaseRichBolt {
 			List<Document> alarms = (List<Document>) doc.get("alarms");
 			for (Document alarm : alarms) {
 				if (alarm.getString("type").equals("simple")) {
-					collector.emit(new Values(topic, timestamp, host, reading_name, value,
-							alarm.get("levels"), alarm.getDouble("recurrence")));
+					collector.emit(new Values(topic, timestamp, host, reading_name, value, alarm.get("levels"),
+							alarm.getDouble("recurrence")));
 				}
 			}
 		} catch (Exception e) {

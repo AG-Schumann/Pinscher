@@ -57,10 +57,10 @@ public class Topology {
 		// split the stream and ensure that all tuples of similar type go to exactly one
 		// buffer
 		tp.setBolt("Buffer", new Buffer().withWindow(new Duration(window_length, TimeUnit.SECONDS), Count.of(1)),
-				5).fieldsGrouping("KafkaSpout", new Fields("topic"));
+				1).fieldsGrouping("KafkaSpout", new Fields("topic"));
 
 		// PID alarm
-		tp.setBolt("PidConfig", new PidConfig(), 5).shuffleGrouping("Buffer");
+		tp.setBolt("PidConfig", new PidConfig(), 1).shuffleGrouping("Buffer");
 
 		tp.setBolt("PropBolt", new ProportionalBolt()).shuffleGrouping("PidConfig");
 

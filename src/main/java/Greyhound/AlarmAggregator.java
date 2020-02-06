@@ -29,8 +29,8 @@ public class AlarmAggregator extends BaseWindowedBolt {
 	public void prepare(Map<String, Object> topoConf, TopologyContext context, OutputCollector collector) {
 		this.collector = collector;
 		String experiment_name = (String) topoConf.get("EXPERIMENT_NAME");
-        	String mongo_uri = (String) topoConf.get("MONGO_CONNECTION_URI");
-        	config_db = new ConfigDB(mongo_uri, experiment_name);
+		String mongo_uri = (String) topoConf.get("MONGO_CONNECTION_URI");
+		config_db = new ConfigDB(mongo_uri, experiment_name);
 	}
 
 	@Override
@@ -83,8 +83,8 @@ public class AlarmAggregator extends BaseWindowedBolt {
 							msg += String.format("%s alarm of %s \n", type, reading_name);
 						}
 					}
-                    collector.emit(new Values(tu.getDoubleByField("timestamp"), howBad, msg));
-                }
+					collector.emit(new Values(tu.getDoubleByField("timestamp"), howBad, msg));
+				}
 			} else if (operation.equals("or")) {
 				// check if at least one of the alarms happened in the given time window
 				// if yes, ??
@@ -116,13 +116,13 @@ public class AlarmAggregator extends BaseWindowedBolt {
 							msg += String.format("%s alarm of %s \n", type, reading_name);
 						}
 					}
-                    collector.emit(new Values(tu.getDoubleByField("timestamp"), howBad, msg));
-                }
+					collector.emit(new Values(tu.getDoubleByField("timestamp"), howBad, msg));
+				}
 			}
-        }
-        String reading_name = tu.getStringByField("reading_name");
-        String alarm_type = tu.getStringByField("alarm_type");
-	    // send alarms without aggregation to LogAlarm bolt
+		}
+		String reading_name = tu.getStringByField("reading_name");
+		String alarm_type = tu.getStringByField("alarm_type");
+		// send alarms without aggregation to LogAlarm bolt
 		if (!aggregated_readings.contains(reading_name + "__" + alarm_type)) {
 			howBad = tu.getDoubleByField("howBad");
 			String topic = tu.getStringByField("topic");
@@ -138,8 +138,8 @@ public class AlarmAggregator extends BaseWindowedBolt {
 				Double lower_threshold = additional_values.get(1);
 				Double upper_threshold = additional_values.get(2);
 				msg = String.format("Pid alarm for %s measurement %s%s: %.3f is outside alarm range (%.3f, %.3f)",
-                        tu.getStringByField("topic"), reading_name, hasHost ? " of " + host : "", pid,
-						lower_threshold, upper_threshold);
+						tu.getStringByField("topic"), reading_name, hasHost ? " of " + host : "", pid, lower_threshold,
+						upper_threshold);
 			}
 
 			else if (alarm_type.equals("simple")) {
@@ -147,25 +147,24 @@ public class AlarmAggregator extends BaseWindowedBolt {
 				Double value = additional_values.get(0);
 				Double lower_threshold = additional_values.get(1);
 				Double upper_threshold = additional_values.get(2);
-                msg = String.format(
-							"Simple alarm for %s measurement %s%s: %.3f is outside alarm range (%.3f, %.3f)", topic,
-							reading_name, hasHost ? " of " + host : "", value, lower_threshold, upper_threshold);
+				msg = String.format("Simple alarm for %s measurement %s%s: %.3f is outside alarm range (%.3f, %.3f)",
+						topic, reading_name, hasHost ? " of " + host : "", value, lower_threshold, upper_threshold);
 			}
 
 			else if (alarm_type.equals("timesince")) {
 				List<Double> additional_values = (List<Double>) tu.getValueByField("additional_parameters");
 				Double value = additional_values.get(0);
 				Double lower_threshold = additional_values.get(1);
-                Double upper_threshold = additional_values.get(2);
+				Double upper_threshold = additional_values.get(2);
 				Double max_duration = additional_values.get(3);
 				msg = String.format(
-                        "TimeSince alarm for %s measurement %s%s: %.3f is outside alarm range (%.3f, %.3f) for more than %.0f seconds",
+						"TimeSince alarm for %s measurement %s%s: %.3f is outside alarm range (%.3f, %.3f) for more than %.0f seconds",
 						topic, reading_name, hasHost ? " of " + host : "", value, lower_threshold, upper_threshold,
 						max_duration);
 			}
-            collector.emit(new Values(tu.getDoubleByField("timestamp"), howBad, msg));
-        }       
-    }
+			collector.emit(new Values(tu.getDoubleByField("timestamp"), howBad, msg));
+		}
+	}
 
 	@Override
 	public void declareOutputFields(OutputFieldsDeclarer declarer) {
