@@ -23,10 +23,12 @@ public class PidConfig extends BaseRichBolt {
 	private String db_name = "settings";
 
 	@Override
-	public void prepare(Map<String, Object> map, TopologyContext topologyContext,
+	public void prepare(Map<String, Object> topoConf, TopologyContext topologyContext,
 			OutputCollector collector) {
 		this.collector = collector;
-        config_db = new ConfigDB();
+	        String experiment_name = (String) topoConf.get("EXPERIMENT_NAME");
+        	String mongo_uri = (String) topoConf.get("MONGO_CONNECTION_URI");
+        	config_db = new ConfigDB(mongo_uri, experiment_name);
 	}
 
 	@Override
