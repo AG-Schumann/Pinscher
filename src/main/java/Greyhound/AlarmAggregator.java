@@ -59,9 +59,14 @@ public class AlarmAggregator extends BaseWindowedBolt {
 				for (String name : names) {
 					for (Tuple tuple : tuples) {
 						if (tuple.getDoubleByField("timestamp") >= System.currentTimeMillis() - time_window) {
-							String this_name = tuple.getStringByField("reading_name") + "__"
+							String this_name = "";
+							String host = tuple.getStringByField("host");
+							if (!host.equals("")) {
+								this_name += host + ",";
+							}
+							this_name += tuple.getStringByField("reading_name") + ","
 									+ tuple.getStringByField("alarm_type");
-							if (this_name == name) {
+							if (this_name.equals(name)) {
 								count += 1;
 								howBad = Math.max(howBad, tuple.getDoubleByField("howBad"));
 							}
@@ -71,7 +76,7 @@ public class AlarmAggregator extends BaseWindowedBolt {
 				if (count == names.size()) {
 					msg = "Following alarms are all active: \n";
 					for (String name : names) {
-						String[] split = name.split("__");
+						String[] split = name.split(",");
 						if (split.length == 3) {
 							String host = split[0];
 							String reading_name = split[1];
@@ -91,20 +96,23 @@ public class AlarmAggregator extends BaseWindowedBolt {
 				int count = 0;
 				for (String name : names) {
 					for (Tuple tuple : tuples) {
-						if (tuple.getDoubleByField("timestamp") >= System.currentTimeMillis() - time_window) {
-							String this_name = tuple.getStringByField("reading_name") + "__"
-									+ tuple.getStringByField("alarm_type");
-							if (this_name == name) {
-								count += 1;
-								howBad = Math.max(howBad, tuple.getDoubleByField("howBad"));
-							}
+						String this_name = "";
+						String host = tuple.getStringByField("host");
+						if (!host.equals("")) {
+							this_name += host + ",";
+						}
+						this_name += tuple.getStringByField("reading_name") + ","
+								+ tuple.getStringByField("alarm_type");
+						if (this_name.equals(name)) {
+							count += 1;
+							howBad = Math.max(howBad, tuple.getDoubleByField("howBad"));
 						}
 					}
 				}
 				if (count >= 1) {
 					msg = "At least one of the following alarms is active: \n";
 					for (String name : names) {
-						String[] split = name.split("__");
+						String[] split = name.split(",");
 						if (split.length == 3) {
 							String host = split[0];
 							String reading_name = split[1];
@@ -120,6 +128,7 @@ public class AlarmAggregator extends BaseWindowedBolt {
 				}
 			}
 		}
+
 		String reading_name = tu.getStringByField("reading_name");
 		String alarm_type = tu.getStringByField("alarm_type");
 		// send alarms without aggregation to LogAlarm bolt
