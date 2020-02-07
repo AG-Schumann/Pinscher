@@ -69,6 +69,7 @@ public class AlarmAggregator extends BaseWindowedBolt {
 							if (this_name.equals(name)) {
 								count += 1;
 								howBad = Math.max(howBad, tuple.getDoubleByField("howBad"));
+								break;
 							}
 						}
 					}
@@ -129,17 +130,20 @@ public class AlarmAggregator extends BaseWindowedBolt {
 			}
 		}
 
+		String this_name = "";
+		String host = tu.getStringByField("host");
+		boolean hasHost = false;
+		if (!host.equals("")) {
+			this_name += host + ",";
+			hasHost = true;
+		}
 		String reading_name = tu.getStringByField("reading_name");
 		String alarm_type = tu.getStringByField("alarm_type");
+		this_name += reading_name + "," + alarm_type;
 		// send alarms without aggregation to LogAlarm bolt
-		if (!aggregated_readings.contains(reading_name + "__" + alarm_type)) {
+		if (!aggregated_readings.contains(this_name)) {
 			howBad = tu.getDoubleByField("howBad");
 			String topic = tu.getStringByField("topic");
-			boolean hasHost = false;
-			String host = tu.getStringByField("host");
-			if (!host.equals("")) {
-				hasHost = true;
-			}
 
 			if (alarm_type.equals("pid")) {
 				List<Double> additional_values = (List<Double>) tu.getValueByField("additional_parameters");
