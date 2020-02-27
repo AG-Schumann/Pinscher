@@ -39,7 +39,7 @@ public class PidConfig extends BaseRichBolt {
 		String host = input.getStringByField("host");
 		String reading_name = input.getStringByField("reading_name");
 		String key = reading_name + "_" + host + "_" + timestamp;
-
+	
 		// get PID alarm parameter from config DB
 		try {
         Document doc = new Document();
@@ -48,9 +48,12 @@ public class PidConfig extends BaseRichBolt {
 		} else {
 			doc = config_db.readOne(db_name, "readings", and(eq("name", reading_name), eq("host", host)));
 		}
-        List<Document> alarms = (List<Document>) doc.get("alarms");
+        String runmode = doc.getString("runmode");
+	List<Document> alarms = (List<Document>) doc.get("alarms");
 		for (Document alarm : alarms) {
-			if (alarm.getString("type").equals("pid")) {
+			if (alarm.getString("type").equals("pid") &&
+					alarm.getString("enabled").equals("true") &&
+					runmode.equals("default")) {
 				collector.emit(new Values(topic, timestamp, host, reading_name,
 						input.getDoubleByField("value"), alarm.getDouble("a"), alarm.getDouble("b"),
 						alarm.getDouble("c"), alarm.getDouble("setpoint"),

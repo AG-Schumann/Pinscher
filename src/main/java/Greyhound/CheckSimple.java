@@ -41,18 +41,19 @@ public class CheckSimple extends BaseWindowedBolt {
 		}
 		Double howBad = -1.;
 		double max_recurrence = tu.getDoubleByField("recurrence");
+		double setpoint = tu.getDoubleByField("setpoint");
 		List<Double> lower_threshold = new ArrayList<Double>();
 		List<Double> upper_threshold = new ArrayList<Double>();
 		List<?> levels = (List<?>) tu.getValueByField("levels");
 		// one alarm level [<Double>, <Double>]
 		if (levels.get(0) instanceof Double) {
-			lower_threshold.add((Double) levels.get(0));
-			upper_threshold.add((Double) levels.get(1));
+			lower_threshold.add(setpoint + (Double) levels.get(0));
+			upper_threshold.add(setpoint + (Double) levels.get(1));
 			// multiple alarm levels [[<Double>, <Double>], [<Double>, <Double>], ...]
 		} else if (levels.get(0) instanceof List<?>) {
 			for (int i = 0; i < levels.size(); ++i) {
-				lower_threshold.add(((List<Double>) levels.get(i)).get(0));
-				upper_threshold.add(((List<Double>) levels.get(i)).get(1));
+				lower_threshold.add(setpoint + ((List<Double>) levels.get(i)).get(0));
+				upper_threshold.add(setpoint + ((List<Double>) levels.get(i)).get(1));
 				// sort lists here or expect correct entries?
 			}
 		} else {

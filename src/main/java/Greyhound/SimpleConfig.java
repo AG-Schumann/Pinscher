@@ -47,10 +47,14 @@ public class SimpleConfig extends BaseRichBolt {
 				doc = config_db.readOne(db_name, "readings", and(eq("name", reading_name), eq("host", host)));
 			}
 			List<Document> alarms = (List<Document>) doc.get("alarms");
+			String runmode = doc.getString("runmode");
 			for (Document alarm : alarms) {
-				if (alarm.getString("type").equals("simple")) {
-					collector.emit(new Values(topic, timestamp, host, reading_name, value, alarm.get("levels"),
-							alarm.getDouble("recurrence")));
+				if (alarm.getString("type").equals("simple") && 
+						alarm.getString("enabled").equals("true") &&
+						runmode.equals("default")) {
+			
+					collector.emit(new Values(topic, timestamp, host, reading_name, value, alarm.getDouble("setpoint"),
+								alarm.get("levels"), alarm.getDouble("recurrence")));
 				}
 			}
 		} catch (Exception e) {
@@ -62,7 +66,7 @@ public class SimpleConfig extends BaseRichBolt {
 
 	@Override
 	public void declareOutputFields(OutputFieldsDeclarer declarer) {
-		declarer.declare(new Fields("topic", "timestamp", "host", "reading_name", "value", "levels", "recurrence"));
+		declarer.declare(new Fields("topic", "timestamp", "host", "reading_name", "value", "setpoint", "levels", "recurrence"));
 	}
 
 }

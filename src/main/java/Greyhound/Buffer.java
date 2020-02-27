@@ -4,6 +4,7 @@ import javax.script.ScriptEngineManager;
 import javax.script.ScriptEngine;
 import javax.script.ScriptException;
 import java.util.List;
+import java.util.Set;
 import java.util.Map;
 import java.util.HashMap;
 import org.apache.storm.task.OutputCollector;
@@ -59,33 +60,28 @@ public class Buffer extends BaseWindowedBolt {
 
 		List<Tuple> tuples = inputWindow.get();
 		if (tuples.size() >= 1) {
+			Set<String> combined = ((Document) config_db.readOne("settings", "sensors", 
+					eq("name", "storm")).get("readings")).keySet();
 			Tuple tu = tuples.get(tuples.size() - 1);
-			WriteToStorage(tu);
-			CheckForCombinedReadings(tuples);
-			collector.emit(new Values(tu.getStringByField("topic"), tu.getDoubleByField("timestamp"),
-					tu.getStringByField("host"), tu.getStringByField("reading_name"),
-					Double.parseDouble(tu.getStringByField("value"))));
-		}
-	}
-
-	private void CheckForCombinedReadings(List<Tuple> tuples) {
-		Tuple tu = tuples.get(tuples.size() - 1);
-		String host = tu.getStringByField("host");
-		String key = tu.getStringByField("reading_name");
-		if (!host.equals("")) {
-			key += "," + host;
-		}
-		List<Document> cobined = config_db.readMany("settings", "readings", eq("sensor", "storm"));
-		for (Document combined_reading : cobined) {
-			String operation = (String) combined_reading.get("operation");
-			if (operation.contains(key)) {
-				CalculateCombinedReading(tuples, combined_reading);
+			String reading_name = tu.getStringByField("reading_name");
+			if (combined.contains(reading_name)) {
+				CalculateCombinedReading(tuples);
+			} else {
+				WriteToStorage(tu);
+				collector.emit(new Values(tu.getStringByField("topic"),
+						tu.getDoubleByField("timestamp"),
+						tu.getStringByField("host"),reading_name,
+						Double.parseDouble(tu.getStringByField("value"))));
 			}
 		}
 	}
 
-	private void CalculateCombinedReading(List<Tuple> tuples, Document combined_reading) {
 
+	private void CalculateCombinedReading(List<Tuple> tuples) {
+
+		Tuple tu = tuples.get(tuples.size() - 1);
+		String operation = tu.getStringByField("value");
+		// Create a Map: '<reading_name>[,<host>]' : '<latest_value>' 
 		Map<String, String> latest_readings = new HashMap<String, String>();
 		for (int i = tuples.size() - 1; i >= 0; --i) {
 			Tuple this_tuple = tuples.get(i);
@@ -98,14 +94,9 @@ public class Buffer extends BaseWindowedBolt {
 				latest_readings.put(key, this_tuple.getStringByField("value"));
 			}
 		}
-		String operation = (String) combined_reading.get("operation");
 		// replace names of single_readings with the latest value
-		// operation can either contain '<reading_name>,<host>' or just '<reading_name>'
-		// for
-		// readings without specified host
-		for (HashMap.Entry<String, String> reading : latest_readings.entrySet()) {
-			String name = reading.getKey();
-			operation = operation.replace(name, reading.getValue());
+		for (String key : latest_readings.keySet()) {
+			operation = operation.replace(key, latest_readings.get(key));
 		}
 		Double this_result = 0.0;
 		try {
@@ -117,16 +108,12 @@ public class Buffer extends BaseWindowedBolt {
 			} else if (eval instanceof Integer) {
 				this_result = ((Integer)eval).doubleValue();
 			}
-			String host = "";
-			if (combined_reading.containsKey("host")) {
-				host = combined_reading.getString("host");
-			}
-			String topic = combined_reading.getString("topic");
-			Double timestamp = (double) System.currentTimeMillis();
-			String reading_name = combined_reading.getString("name");
-			WriteToStorage(topic, timestamp, host, reading_name, this_result);
-			collector.emit(new Values(topic, timestamp, host, reading_name, this_result));
-		} catch (ScriptException e) {
+			String topic = tu.getStringByField("topic");
+			Double timestamp = tu.getDoubleByField("timestamp");
+			String reading_name = tu.getStringByField("reading_name");
+			WriteToStorage(topic, timestamp, "", reading_name, this_result);
+			collector.emit(new Values(topic, timestamp, "", reading_name, this_result));
+		} catch (Exception e) {
 			// log message
 		}
 	}
@@ -159,13 +146,24 @@ public class Buffer extends BaseWindowedBolt {
 		if (!host.equals("")) {
 			point.tag("host", host);
 		}
-		try {
-			influx_db.setDatabase(experiment_name);
-			influx_db.write(point.build());
-		} catch (DatabaseNotFoundException e) {
-			influx_db.query(new Query("CREATE DATABASE " + experiment_name));
-			influx_db.setDatabase(experiment_name);
-			influx_db.write(point.build());
+		if (topic.equals("sysmon")) {
+			try {
+				influx_db.setDatabase("common");
+                        	influx_db.write(point.build());
+                	} catch (DatabaseNotFoundException e) {
+                        	influx_db.query(new Query("CREATE DATABASE common"));
+                        	influx_db.setDatabase("common");
+                        	influx_db.write(point.build());
+			}
+		} else {
+			try {
+				influx_db.setDatabase(experiment_name);
+				influx_db.write(point.build());
+			} catch (DatabaseNotFoundException e) {
+				influx_db.query(new Query("CREATE DATABASE " + experiment_name));
+				influx_db.setDatabase(experiment_name);
+				influx_db.write(point.build());
+			}
 		}
 	}
 

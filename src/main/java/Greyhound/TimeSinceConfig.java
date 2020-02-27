@@ -48,8 +48,11 @@ public class TimeSinceConfig extends BaseRichBolt {
                             eq("host", host)));
 		    }
 		    List<Document> alarms = (List<Document>) doc.get("alarms");
+		    String runmode = doc.getString("runmode");
 		    for (Document alarm : alarms) {
-			    if (alarm.getString("type").equals("time_since")) {
+			    if (alarm.getString("type").equals("time_since") &&
+				    alarm.getString("enabled").equals("true") &&
+				    runmode.equals("default")) {
 				    collector.emit(new Values(topic, timestamp, host, reading_name,
                                 input.getDoubleByField("value"), alarm.getDouble("lower_threshold"),
                                 alarm.getDouble("upper_threshold"), alarm.get("max_duration")));
