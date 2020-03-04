@@ -5,6 +5,7 @@ import javax.script.ScriptEngine;
 import javax.script.ScriptException;
 import java.util.List;
 import java.util.Set;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.HashMap;
 import org.apache.storm.task.OutputCollector;
@@ -60,11 +61,17 @@ public class Buffer extends BaseWindowedBolt {
 
 		List<Tuple> tuples = inputWindow.get();
 		if (tuples.size() >= 1) {
-			Set<String> combined = ((Document) config_db.readOne("settings", "sensors", 
-					eq("name", "storm")).get("readings")).keySet();
+			Document combined = config_db.readOne("settings", "sensors", 
+					eq("name", "storm"));
+			Set<String> combined_readings = new HashSet<String>();
+			try {
+				combined_readings = ((Document) combined.get("readings")).keySet();
+			} catch (Exception e) {
+				
+			}
 			Tuple tu = tuples.get(tuples.size() - 1);
 			String reading_name = tu.getStringByField("reading_name");
-			if (combined.contains(reading_name)) {
+			if (combined_readings.contains(reading_name)) {
 				CalculateCombinedReading(tuples);
 			} else {
 				WriteToStorage(tu);
