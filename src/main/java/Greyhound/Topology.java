@@ -57,9 +57,9 @@ public class Topology {
 		// ReadingAggregator
 
 		tp.setBolt("ReadingAggregator",
-				new ReadingAggregator().withWindow(new Duration(window_length, TimeUnit.SECONDS), Count.of(1)))
+				new ReadingAggregator().withWindow(new Duration(60, TimeUnit.SECONDS), Count.of(1)))
 				.shuffleGrouping("KafkaSpout");
-		tp.setBolt("WritToStorage", new WriteToStorage(), 5).shuffleGrouping("ReadingAggregator");
+		tp.setBolt("WriteToStorage", new WriteToStorage(), 5).shuffleGrouping("ReadingAggregator");
 		tp.setBolt("PidConfig", new PidConfig()).shuffleGrouping("ReadingAggregator");
 		
 		// PID alarm

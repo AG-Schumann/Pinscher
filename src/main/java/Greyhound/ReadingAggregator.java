@@ -41,6 +41,8 @@ public class ReadingAggregator extends BaseWindowedBolt {
 	private ConfigDB config_db;
 	private String experiment_name = new String();
 	private String mongo_uri = new String();
+	private Document combined = new Document();
+	private long last_update = 0;
 
 	@Override
 	public void prepare(Map<String, Object> topoConf, TopologyContext context, OutputCollector collector) {
@@ -57,8 +59,13 @@ public class ReadingAggregator extends BaseWindowedBolt {
 
 		List<Tuple> tuples = inputWindow.get();
 		if (tuples.size() >= 1) {
-			Document combined = config_db.readOne("settings", "sensors", 
-					eq("name", "storm"));
+			// refresh config file every second
+			long current_time = System.currentTimeMillis();
+			if (current_time - last_update >= 1000) {
+				combined = config_db.readOne("settings", "sensors", 
+						eq("name", "storm"));
+				last_update = current_time;
+			}
 			Set<String> combined_readings = new HashSet<String>();
 			try {
 				combined_readings = ((Document) combined.get("readings")).keySet();
