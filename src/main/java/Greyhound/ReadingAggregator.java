@@ -26,7 +26,7 @@ import org.influxdb.InfluxDBException.DatabaseNotFoundException;
 import static com.mongodb.client.model.Filters.*;
 import java.util.concurrent.TimeUnit;
 
-public class Buffer extends BaseWindowedBolt {
+public class ReadingAggregator extends BaseWindowedBolt {
 	/**
 	 * Each buffer recieves tuples from exactly one topic. It fetches the defined
 	 * commit interval from the config DB for its topic and collects tuples as long
@@ -39,7 +39,6 @@ public class Buffer extends BaseWindowedBolt {
 	private static final long serialVersionUID = 1L;
 	private OutputCollector collector;
 	private ConfigDB config_db;
-	private InfluxDB influx_db;
 	private String experiment_name = new String();
 	private String mongo_uri = new String();
 
@@ -51,9 +50,6 @@ public class Buffer extends BaseWindowedBolt {
 		experiment_name = (String) topoConf.get("EXPERIMENT_NAME");
 		mongo_uri = (String) topoConf.get("MONGO_CONNECTION_URI");
 		config_db = new ConfigDB(mongo_uri, experiment_name);
-		String influx_server = (String) config_db.readOne("settings", "experiment_config", eq("name", "influx"))
-				.get("server");
-		influx_db = InfluxDBFactory.connect(influx_server);
 	}
 
 	@Override
@@ -74,7 +70,6 @@ public class Buffer extends BaseWindowedBolt {
 			if (combined_readings.contains(reading_name)) {
 				CalculateCombinedReading(tuples);
 			} else {
-				WriteToStorage(tu);
 				collector.emit(new Values(tu.getStringByField("topic"),
 						tu.getDoubleByField("timestamp"),
 						tu.getStringByField("host"),reading_name,
@@ -118,59 +113,9 @@ public class Buffer extends BaseWindowedBolt {
 			String topic = tu.getStringByField("topic");
 			Double timestamp = tu.getDoubleByField("timestamp");
 			String reading_name = tu.getStringByField("reading_name");
-			WriteToStorage(topic, timestamp, "", reading_name, this_result);
 			collector.emit(new Values(topic, timestamp, "", reading_name, this_result));
 		} catch (Exception e) {
 			// log message
-		}
-	}
-
-	private void WriteToStorage(String topic, Double timestamp, String host, String reading_name, Double value) {
-
-		Builder point = Point.measurement(topic).time(timestamp.longValue(), TimeUnit.MILLISECONDS);
-		point.addField(reading_name, value);
-		if (!host.equals("")) {
-			point.tag("host", host);
-		}
-		try {
-			influx_db.setDatabase(experiment_name);
-			influx_db.write(point.build());
-		} catch (DatabaseNotFoundException e) {
-			influx_db.query(new Query("CREATE DATABASE " + experiment_name));
-			influx_db.setDatabase(experiment_name);
-			influx_db.write(point.build());
-		}
-	}
-
-	private void WriteToStorage(Tuple tu) {
-
-		String topic = tu.getStringByField("topic");
-		Double value = Double.parseDouble(tu.getStringByField("value"));
-		Double timestamp = tu.getDoubleByField("timestamp");
-		Builder point = Point.measurement(topic).time(timestamp.longValue(), TimeUnit.MILLISECONDS);
-		point.addField(tu.getStringByField("reading_name"), value);
-		String host = tu.getStringByField("host");
-		if (!host.equals("")) {
-			point.tag("host", host);
-		}
-		if (topic.equals("sysmon")) {
-			try {
-				influx_db.setDatabase("common");
-                        	influx_db.write(point.build());
-                	} catch (DatabaseNotFoundException e) {
-                        	influx_db.query(new Query("CREATE DATABASE common"));
-                        	influx_db.setDatabase("common");
-                        	influx_db.write(point.build());
-			}
-		} else {
-			try {
-				influx_db.setDatabase(experiment_name);
-				influx_db.write(point.build());
-			} catch (DatabaseNotFoundException e) {
-				influx_db.query(new Query("CREATE DATABASE " + experiment_name));
-				influx_db.setDatabase(experiment_name);
-				influx_db.write(point.build());
-			}
 		}
 	}
 

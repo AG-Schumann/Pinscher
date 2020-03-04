@@ -25,7 +25,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 public class Topology {
-		
+
 	private static ConfigDB config_db;
 
 	public static void main(String[] args) {
@@ -34,33 +34,35 @@ public class Topology {
 		try {
 			mongo_uri = args[0];
 			experiment_name = args[1];
-		} catch(ArrayIndexOutOfBoundsException e) {
+		} catch (ArrayIndexOutOfBoundsException e) {
 			System.out.println("Topology requires two arguments: MONGO_URI, EXPERIMENT_NAME");
 		}
-		Map<String, Object> config = new HashMap<String,Object>();
+		Map<String, Object> config = new HashMap<String, Object>();
 		config.put("MONGO_CONNECTION_URI", mongo_uri);
-                config.put("EXPERIMENT_NAME", experiment_name);
+		config.put("EXPERIMENT_NAME", experiment_name);
 		config_db = new ConfigDB(mongo_uri, experiment_name);
 		String bootstrap_servers = (String) config_db.readOne("settings", "experiment_config", eq("name", "kafka"))
-	             .get("bootstrap_servers");
+				.get("bootstrap_servers");
 		int window_length = 600;
 		int max_recurrence = 50;
-		
+
 		config.put(Config.TOPOLOGY_MESSAGE_TIMEOUT_SECS, 666);
-/*		config.setNumWorkers(1);
-		config.setDebug(true);
-*/
+		/*
+		 * config.setNumWorkers(1); config.setDebug(true);
+		 */
 		TopologyBuilder tp = new TopologyBuilder();
 		// KafkaSpout emits tuples to streams named after their topics
-		tp.setSpout("KafkaSpout", new KafkaSpout<>(getKafkaSpoutConfig(bootstrap_servers, experiment_name )));
+		tp.setSpout("KafkaSpout", new KafkaSpout<>(getKafkaSpoutConfig(bootstrap_servers, experiment_name)));
 		// split the stream and ensure that all tuples of similar type go to exactly one
-		// buffer
-		
-		tp.setBolt("Buffer", new Buffer().withWindow(new Duration(window_length, TimeUnit.SECONDS), Count.of(1)))
-			.shuffleGrouping("KafkaSpout");
-		// PID alarm
-		tp.setBolt("PidConfig", new PidConfig()).shuffleGrouping("Buffer");
+		// ReadingAggregator
 
+		tp.setBolt("ReadingAggregator",
+				new ReadingAggregator().withWindow(new Duration(window_length, TimeUnit.SECONDS), Count.of(1)))
+				.shuffleGrouping("KafkaSpout");
+		tp.setBolt("WritToStorage", new WriteToStorage(), 5).shuffleGrouping("ReadingAggregator");
+		tp.setBolt("PidConfig", new PidConfig()).shuffleGrouping("ReadingAggregator");
+		
+		// PID alarm
 		tp.setBolt("PropBolt", new ProportionalBolt()).shuffleGrouping("PidConfig");
 
 		tp.setBolt("IntBolt", new IntegralBolt().withWindow(new Duration(window_length, TimeUnit.SECONDS), Count.of(1)),
@@ -84,22 +86,19 @@ public class Topology {
 				.fieldsGrouping("PidBolt", new Fields("reading_name"));
 
 		// Time Since alarm
-		tp.setBolt("TimeSinceConfig", new TimeSinceConfig(), 1).shuffleGrouping("Buffer");
+		tp.setBolt("TimeSinceConfig", new TimeSinceConfig(), 1).shuffleGrouping("ReadingAggregator");
 		tp.setBolt("TimeSinceBolt",
 				new TimeSinceBolt().withWindow(new Duration(window_length, TimeUnit.SECONDS), Count.of(1)), 5)
 				.fieldsGrouping("TimeSinceConfig", new Fields("host", "reading_name"));
 		tp.setBolt("CheckTimeSince", new CheckTimeSince(), 5).shuffleGrouping("TimeSinceBolt");
-		
+
 		// Simple alarm
-		tp.setBolt("SimpleConfig", new SimpleConfig(), 1).shuffleGrouping("Buffer");
+		tp.setBolt("SimpleConfig", new SimpleConfig(), 1).shuffleGrouping("ReadingAggregator");
 		tp.setBolt("CheckSimple", new CheckSimple().withWindow(Count.of(max_recurrence), Count.of(1)), 5)
 				.fieldsGrouping("SimpleConfig", new Fields("reading_name"));
 		tp.setBolt("AlarmAggregator",
-	    		new AlarmAggregator()
-              .withWindow(new Duration(window_length, TimeUnit.SECONDS), Count.of(1)))
-				.shuffleGrouping("CheckPid")
-			    .shuffleGrouping("CheckTimeSince")
-			    .shuffleGrouping("CheckSimple");
+				new AlarmAggregator().withWindow(new Duration(window_length, TimeUnit.SECONDS), Count.of(1)))
+				.shuffleGrouping("CheckPid").shuffleGrouping("CheckTimeSince").shuffleGrouping("CheckSimple");
 
 		tp.setBolt("LogAlarm", new LogAlarm()).shuffleGrouping("AlarmAggregator");
 		// Submit topology to production cluster
@@ -110,23 +109,21 @@ public class Topology {
 		}
 	}
 
-	private static KafkaSpoutConfig<String, String> getKafkaSpoutConfig(String bootstrapServers, String experiment_name) {
+	private static KafkaSpoutConfig<String, String> getKafkaSpoutConfig(String bootstrapServers,
+			String experiment_name) {
 		ByTopicRecordTranslator<String, String> trans = new ByTopicRecordTranslator<>(
-				(r) -> new Values(r.topic().split("_")[1], (double) r.timestamp(), "", decode(r.value())[0], decode(r.value())[1]),
+				(r) -> new Values(r.topic().split("_")[1], (double) r.timestamp(), "", decode(r.value())[0],
+						decode(r.value())[1]),
 				new Fields("topic", "timestamp", "host", "reading_name", "value"));
-		trans.forTopic(
-				experiment_name + "_sysmon", (r) -> new Values(r.topic().split("_")[1], (double) r.timestamp(), decode(r.value())[0],
+		trans.forTopic(experiment_name + "_sysmon",
+				(r) -> new Values(r.topic().split("_")[1], (double) r.timestamp(), decode(r.value())[0],
 						decode(r.value())[1], decode(r.value())[2]),
 				new Fields("topic", "timestamp", "host", "reading_name", "value"));
 
 		return KafkaSpoutConfig.builder(bootstrapServers, Pattern.compile("^" + experiment_name + "_.*$"))
-				.setProp(ConsumerConfig.GROUP_ID_CONFIG, "kafkaSpoutTestGroup")
-				.setRetry(getRetryService())
-				.setRecordTranslator(trans)
-				.setOffsetCommitPeriodMs(10_000)
-				.setFirstPollOffsetStrategy(LATEST)
-				.setMaxUncommittedOffsets(200000)
-				.build();
+				.setProp(ConsumerConfig.GROUP_ID_CONFIG, "kafkaSpoutTestGroup").setRetry(getRetryService())
+				.setRecordTranslator(trans).setOffsetCommitPeriodMs(10_000).setFirstPollOffsetStrategy(LATEST)
+				.setMaxUncommittedOffsets(200000).build();
 	}
 
 	private static String[] decode(String message) {
