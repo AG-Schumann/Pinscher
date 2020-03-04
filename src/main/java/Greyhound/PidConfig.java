@@ -38,7 +38,6 @@ public class PidConfig extends BaseRichBolt {
 		Double timestamp = input.getDoubleByField("timestamp");
 		String host = input.getStringByField("host");
 		String reading_name = input.getStringByField("reading_name");
-		String key = reading_name + "_" + host + "_" + timestamp;
 	
 		// get PID alarm parameter from config DB
 		try {
@@ -58,7 +57,7 @@ public class PidConfig extends BaseRichBolt {
 						input.getDoubleByField("value"), alarm.getDouble("a"), alarm.getDouble("b"),
 						alarm.getDouble("c"), alarm.getDouble("setpoint"),
 						alarm.getDouble("dt_int"), alarm.getDouble("dt_diff"),
-						alarm.get("levels"), alarm.getDouble("recurrence"), key));
+						alarm.get("levels"), alarm.getDouble("recurrence")));
 			}
 		}
         } catch (Exception e) {
@@ -71,7 +70,7 @@ public class PidConfig extends BaseRichBolt {
 	@Override
 	public void declareOutputFields(OutputFieldsDeclarer declarer) {
 		declarer.declare(new Fields("topic", "timestamp", "host", "reading_name", "value", "a", "b", "c",
-				"setpoint", "dt_int", "dt_diff", "levels", "recurrence", "key"));
+				"setpoint", "dt_int", "dt_diff", "levels", "recurrence"));
 
 	}
 }
