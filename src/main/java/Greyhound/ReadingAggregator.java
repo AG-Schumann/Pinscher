@@ -2,7 +2,6 @@ package Greyhound;
 
 import javax.script.ScriptEngineManager;
 import javax.script.ScriptEngine;
-import javax.script.ScriptException;
 import java.util.List;
 import java.util.Set;
 import java.util.HashSet;
@@ -17,14 +16,7 @@ import org.apache.storm.tuple.Tuple;
 import org.apache.storm.tuple.Values;
 import org.apache.storm.windowing.TupleWindow;
 import org.bson.Document;
-import org.influxdb.InfluxDB;
-import org.influxdb.InfluxDBFactory;
-import org.influxdb.dto.Point;
-import org.influxdb.dto.Point.Builder;
-import org.influxdb.dto.Query;
-import org.influxdb.InfluxDBException.DatabaseNotFoundException;
 import static com.mongodb.client.model.Filters.*;
-import java.util.concurrent.TimeUnit;
 
 public class ReadingAggregator extends BaseWindowedBolt {
 	/**

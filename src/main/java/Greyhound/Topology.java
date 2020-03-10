@@ -2,14 +2,12 @@ package Greyhound;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.storm.Config;
-import org.apache.storm.bolt.JoinBolt;
 import org.apache.storm.kafka.spout.ByTopicRecordTranslator;
 import org.apache.storm.kafka.spout.KafkaSpout;
 import org.apache.storm.kafka.spout.KafkaSpoutConfig;
 import org.apache.storm.kafka.spout.KafkaSpoutRetryExponentialBackoff;
 import org.apache.storm.kafka.spout.KafkaSpoutRetryService;
 import org.apache.storm.topology.TopologyBuilder;
-import org.apache.storm.topology.base.BaseWindowedBolt;
 import org.apache.storm.topology.base.BaseWindowedBolt.Count;
 import org.apache.storm.topology.base.BaseWindowedBolt.Duration;
 import org.apache.storm.tuple.Fields;
@@ -99,7 +97,6 @@ public class Topology {
 		try {
 			StormSubmitter.submitTopology(experiment_name, config, tp.createTopology());
 		} catch (Exception e) {
-			e.printStackTrace();
 		}
 	}
 
@@ -121,13 +118,9 @@ public class Topology {
 				(r) -> new Values(r.topic().split("_")[1], (double) r.timestamp(), decode(r.value())[0],
 						decode(r.value())[1], decode(r.value())[2]),
 				new Fields("topic", "timestamp", "host", "reading_name", "value"));
-		KafkaSpoutRetryService retry = new KafkaSpoutRetryExponentialBackoff(
-				KafkaSpoutRetryExponentialBackoff.TimeInterval.microSeconds(500),
-				KafkaSpoutRetryExponentialBackoff.TimeInterval.milliSeconds(2), Integer.MAX_VALUE,
-				KafkaSpoutRetryExponentialBackoff.TimeInterval.seconds(10));
 		return KafkaSpoutConfig
 				.builder(bootstrapServers, Pattern.compile("^" + experiment_name + "_.*$"))
-				.setProp(ConsumerConfig.GROUP_ID_CONFIG, "kafkaSpoutTestGroup").setRetry(retry)
+				.setProp(ConsumerConfig.GROUP_ID_CONFIG, "kafkaSpoutTestGroup").setRetry(getRetryService())
 				.setRecordTranslator(trans).setOffsetCommitPeriodMs(10_000)
 				.setFirstPollOffsetStrategy(LATEST).setMaxUncommittedOffsets(200000).build();
 	}
@@ -139,6 +132,12 @@ public class Topology {
 		 */
 		return message.split(",");
 
+	}
+	
+	private static KafkaSpoutRetryService getRetryService() {
+		return new KafkaSpoutRetryExponentialBackoff(KafkaSpoutRetryExponentialBackoff.TimeInterval.microSeconds(500),
+				KafkaSpoutRetryExponentialBackoff.TimeInterval.milliSeconds(2), Integer.MAX_VALUE,
+				KafkaSpoutRetryExponentialBackoff.TimeInterval.seconds(10));
 	}
 
 }
