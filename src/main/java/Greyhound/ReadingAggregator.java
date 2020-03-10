@@ -28,7 +28,9 @@ import java.util.concurrent.TimeUnit;
 
 public class ReadingAggregator extends BaseWindowedBolt {
 	/**
-	 * Each buffer recieves tuples from exactly one topic. It fetches the defined
+	 * The ReadingAggregator receives tuples from the KafkaSpout.
+	 * 
+	 * Each buffer receives tuples from exactly one topic. It fetches the defined
 	 * commit interval from the config DB for its topic and collects tuples as long
 	 * as the last commit was less then one commit interval ago. When the last
 	 * commit is more than one commit interval ago, Buffer calculates the mean of
@@ -45,7 +47,8 @@ public class ReadingAggregator extends BaseWindowedBolt {
 	private long last_update = 0;
 
 	@Override
-	public void prepare(Map<String, Object> topoConf, TopologyContext context, OutputCollector collector) {
+	public void prepare(Map<String, Object> topoConf, TopologyContext context,
+			OutputCollector collector) {
 
 		this.collector = collector;
 
@@ -56,41 +59,44 @@ public class ReadingAggregator extends BaseWindowedBolt {
 
 	@Override
 	public void execute(TupleWindow inputWindow) {
+		/*
+		 * Checks each tuple if it belongs to a combined reading (i.e. the sensor is
+		 * storm) If yes it is calculated, else the tuple is emitted unchanged
+		 */
 
 		List<Tuple> tuples = inputWindow.get();
 		if (tuples.size() >= 1) {
 			// refresh config file every second
 			long current_time = System.currentTimeMillis();
 			if (current_time - last_update >= 1000) {
-				combined = config_db.readOne("settings", "sensors", 
-						eq("name", "storm"));
+				combined = config_db.readOne("settings", "sensors", eq("name", "storm"));
 				last_update = current_time;
 			}
+
 			Set<String> combined_readings = new HashSet<String>();
 			try {
 				combined_readings = ((Document) combined.get("readings")).keySet();
 			} catch (Exception e) {
-				
+				String msg = "Can\'t acess cominded readings: " + e;
+				config_db.log(msg, 20);
 			}
 			Tuple tu = tuples.get(tuples.size() - 1);
 			String reading_name = tu.getStringByField("reading_name");
 			if (combined_readings.contains(reading_name)) {
 				CalculateCombinedReading(tuples);
 			} else {
-				collector.emit(new Values(tu.getStringByField("topic"),
-						tu.getDoubleByField("timestamp"),
-						tu.getStringByField("host"),reading_name,
+				collector.emit(new Values(tu.getStringByField("topic"), tu.getDoubleByField("timestamp"),
+						tu.getStringByField("host"), reading_name,
 						Double.parseDouble(tu.getStringByField("value"))));
 			}
 		}
 	}
 
-
 	private void CalculateCombinedReading(List<Tuple> tuples) {
 
 		Tuple tu = tuples.get(tuples.size() - 1);
 		String operation = tu.getStringByField("value");
-		// Create a Map: '<reading_name>[,<host>]' : '<latest_value>' 
+		// Create a Map: '<reading_name>[,<host>]' : '<latest_value>'
 		Map<String, String> latest_readings = new HashMap<String, String>();
 		for (int i = tuples.size() - 1; i >= 0; --i) {
 			Tuple this_tuple = tuples.get(i);
@@ -115,14 +121,16 @@ public class ReadingAggregator extends BaseWindowedBolt {
 			if (eval instanceof Double) {
 				this_result = (Double) eval;
 			} else if (eval instanceof Integer) {
-				this_result = ((Integer)eval).doubleValue();
+				this_result = ((Integer) eval).doubleValue();
 			}
 			String topic = tu.getStringByField("topic");
 			Double timestamp = tu.getDoubleByField("timestamp");
 			String reading_name = tu.getStringByField("reading_name");
 			collector.emit(new Values(topic, timestamp, "", reading_name, this_result));
 		} catch (Exception e) {
-			// log message
+			String msg = "Can\'t calculate cominded readings " + tu.getStringByField("reading_name")
+					+ " : " + e;
+			config_db.log(msg, 20);
 		}
 	}
 

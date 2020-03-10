@@ -3,7 +3,6 @@ package Greyhound;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.storm.Config;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 
@@ -76,5 +75,16 @@ public final class ConfigDB {
 	public void writeOne(String db_name, String collection_name, Document doc) {
 		MongoCollection<Document> collection = check(db_name, collection_name);
 		collection.insertOne(doc);
+	}
+	
+	public void log(String msg, int level) {
+		
+		StackTraceElement[] ste = Thread.currentThread().getStackTrace(); 
+		Document doc = new Document("msg", msg);
+		doc.append("level", level);
+		doc.append("name", ste[0]);
+		doc.append("funcname", ste[5]);
+		doc.append("lineno", ste[4]);
+		writeOne("logging", "logs", doc);
 	}
 }
