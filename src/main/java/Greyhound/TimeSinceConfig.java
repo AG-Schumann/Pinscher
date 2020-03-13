@@ -59,7 +59,8 @@ public class TimeSinceConfig extends BaseRichBolt {
 			    }
 		    }
         } catch (Exception e) {
-            // How do we log cases like that?
+	    String msg = "Can't access alarm config for " + reading_name;	
+            config_db.log(msg, 20);
         } finally {
 		   collector.ack(input);
         }

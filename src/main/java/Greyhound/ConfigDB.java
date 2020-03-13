@@ -79,12 +79,12 @@ public final class ConfigDB {
 	
 	public void log(String msg, int level) {
 		
-		StackTraceElement[] ste = Thread.currentThread().getStackTrace(); 
+		StackTraceElement ste = Thread.currentThread().getStackTrace()[2]; 
 		Document doc = new Document("msg", msg);
 		doc.append("level", level);
-		doc.append("name", ste[0]);
-		doc.append("funcname", ste[5]);
-		doc.append("lineno", ste[4]);
+		doc.append("name", ste.getFileName().split("\\.")[0]);
+		doc.append("funcname", ste.getMethodName());
+		doc.append("lineno", ste.getLineNumber());
 		writeOne("logging", "logs", doc);
 	}
 }
