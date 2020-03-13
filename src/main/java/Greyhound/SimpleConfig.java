@@ -58,7 +58,8 @@ public class SimpleConfig extends BaseRichBolt {
 				}
 			}
 		} catch (Exception e) {
-			System.out.println("SOMETHING WENT WRONG");
+			String msg = "Can't access alarm config for " + reading_name; 
+            		config_db.log(msg, 20);
 		} finally {
 			collector.ack(input);
 		}

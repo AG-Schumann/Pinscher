@@ -49,7 +49,7 @@ public class Topology {
 		Map<String, Object> config = new HashMap<String, Object>();
 		config.put("MONGO_CONNECTION_URI", mongo_uri);
 		config.put("EXPERIMENT_NAME", experiment_name);
-		config.put(Config.TOPOLOGY_MESSAGE_TIMEOUT_SECS, 1.1 * window_length);
+		config.put(Config.TOPOLOGY_MESSAGE_TIMEOUT_SECS, (int) 1.1 * window_length);
 		config_db = new ConfigDB(mongo_uri, experiment_name);
 		String bootstrap_servers = (String) config_db
 				.readOne("settings", "experiment_config", eq("name", "kafka")).get("bootstrap_servers");
@@ -97,6 +97,7 @@ public class Topology {
 		try {
 			StormSubmitter.submitTopology(experiment_name, config, tp.createTopology());
 		} catch (Exception e) {
+			System.out.println("Could not sumbmit topology: " + e);
 		}
 	}
 
