@@ -1,4 +1,4 @@
-package Greyhound;
+package Pinscher;
 
 import java.util.Date;
 import java.util.Map;

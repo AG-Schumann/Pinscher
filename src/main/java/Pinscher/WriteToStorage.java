@@ -1,4 +1,4 @@
-package Greyhound;
+package Pinscher;
 
 import static com.mongodb.client.model.Filters.eq;
 
