@@ -16,9 +16,8 @@ Pinscher is an open source software based on Apache Storm that can be used as pa
 
 Installation guide tested for Ubuntu 18.04 LTS
 
-* Install git if not pre-installed already, e.g.`sudo apt-get install git` (apt-get needs to be up to date: `sudo apt-get update`)
-
 1. Set up an Apache Storm 2.0.0 cluster (https://storm.apache.org/releases/2.0.0/Setting-up-a-Storm-cluster.html)
-2. Setup the configuration database (to be added)
-3. Submit the topology for a specific experiment: 
-`$STORM_PATH/bin/storm jar ./target/Pinscher-<VERSION>-jar-with-dependencies.jar <MONGO_URI> <EXPERIMENT_NAME>`
+2. Setup the configuration database for the experiment (to be added)
+3. Download the pinscher.jar file
+4. Submit the topology for the specific experiment: 
+`$STORM_PATH/bin/storm jar pinscher.jar <MONGO_URI> <EXPERIMENT_NAME>`
