@@ -39,7 +39,6 @@ public class AlarmAggregator extends BaseWindowedBolt {
 		Tuple tu = tuples.get(tuples.size() - 1);
 		String msg = new String();
 		Double howBad = -1.;
-		/*
 		List<Document> aggregations = config_db.readMany("settings", "alarm_aggregations");
 		// get a list 'aggregated_readings' of all reading_names used in an alarm
 		// aggregation
@@ -130,7 +129,6 @@ public class AlarmAggregator extends BaseWindowedBolt {
 				}
 			}
 		}
-*/
 		String this_name = "";
 		String host = tu.getStringByField("host");
 		boolean hasHost = false;
@@ -142,8 +140,7 @@ public class AlarmAggregator extends BaseWindowedBolt {
 		String alarm_type = tu.getStringByField("alarm_type");
 		this_name += reading_name + "," + alarm_type;
 		// send alarms without aggregation to LogAlarm bolt
-		//if (!aggregated_readings.contains(this_name)) {
-		if(true) {	
+		if (!aggregated_readings.contains(this_name)) {
 			howBad = tu.getDoubleByField("howBad");
 			String topic = tu.getStringByField("topic");
 
