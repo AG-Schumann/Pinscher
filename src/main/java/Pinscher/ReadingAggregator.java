@@ -70,7 +70,7 @@ public class ReadingAggregator extends BaseWindowedBolt {
 				combined_readings = ((Document) combined.get("readings")).keySet();
 			} catch (Exception e) {
 				String msg = "Can\'t access combinded readings: " + e;
-				config_db.log(msg, 20);
+				config_db.log(msg, 10);
 			}
 			Tuple tu = tuples.get(tuples.size() - 1);
 			String reading_name = tu.getStringByField("reading_name");
