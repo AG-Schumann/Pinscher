@@ -61,8 +61,10 @@ public class PidConfig extends BaseRichBolt {
 			}
 		}
         } catch (Exception e) {
-        	String msg = "Can't access alarm config for " + reading_name + ": " + e; 
+            if (host.equals("")) {
+        	    String msg = "Can't access alarm config for " + reading_name + ": " + e; 
             	config_db.log(msg, 10);
+            }
 	} finally {
             collector.ack(input);
         }
