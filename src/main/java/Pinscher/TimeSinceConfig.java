@@ -59,8 +59,11 @@ public class TimeSinceConfig extends BaseRichBolt {
 			    }
 		    }
         } catch (Exception e) {
-	    String msg = "Can't access alarm config for " + reading_name + ": " + e;	
-            config_db.log(msg, 10);
+	        // How to handle if alarms aren't configured? 
+            if (host.equals("")) {
+                String msg = "Can't access alarm config for " + reading_name + ": " + e;	
+                config_db.log(msg, 10);
+            }
         } finally {
 		   collector.ack(input);
         }

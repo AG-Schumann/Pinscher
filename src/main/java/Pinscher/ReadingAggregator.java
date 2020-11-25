@@ -77,9 +77,13 @@ public class ReadingAggregator extends BaseWindowedBolt {
 			if (combined_readings.contains(reading_name)) {
 				CalculateCombinedReading(tuples);
 			} else {
-				collector.emit(new Values(tu.getStringByField("topic"), tu.getDoubleByField("timestamp"),
-						tu.getStringByField("host"), reading_name,
-						Double.parseDouble(tu.getStringByField("value"))));
+                try{
+                    Double value = Double.parseDouble(tu.getStringByField("value"));
+                    collector.emit(new Values(tu.getStringByField("topic"), tu.getDoubleByField("timestamp"), tu.getStringByField("host"), reading_name, value));
+                } catch (NumberFormatException e) {
+                    String msg = "Can't convert input '" + tu.getStringByField("value") +"' of " + reading_name + " into a floating point number.";
+                    config_db.log(msg, 20);
+                }
 			}
 		}
 	}

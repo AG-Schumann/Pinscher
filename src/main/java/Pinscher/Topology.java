@@ -113,11 +113,11 @@ public class Topology {
 		 */
 		ByTopicRecordTranslator<String, String> trans = new ByTopicRecordTranslator<>(
 				(r) -> new Values(r.topic().split("_")[1], (double) r.timestamp(), "",
-						decode(r.value())[0], decode(r.value())[1]),
+						decode(r.value(), 2)[0], decode(r.value(), 2)[1]),
 				new Fields("topic", "timestamp", "host", "reading_name", "value"));
 		trans.forTopic(experiment_name + "_sysmon",
-				(r) -> new Values(r.topic().split("_")[1], (double) r.timestamp(), decode(r.value())[0],
-						decode(r.value())[1], decode(r.value())[2]),
+				(r) -> new Values(r.topic().split("_")[1], (double) r.timestamp(), decode(r.value(), 3)[0],
+						decode(r.value(), 3)[1], decode(r.value(), 3)[2]),
 				new Fields("topic", "timestamp", "host", "reading_name", "value"));
 		return KafkaSpoutConfig
 				.builder(bootstrapServers, Pattern.compile("^" + experiment_name + "_.*$"))
@@ -126,12 +126,12 @@ public class Topology {
 				.setFirstPollOffsetStrategy(LATEST).setMaxUncommittedOffsets(200000).build();
 	}
 
-	private static String[] decode(String message) {
+	private static String[] decode(String message, int limit) {
 		/*
 		 * Splits comma separated messages into its parts 
 		 * :param message: "[<host>],<reading_name>,<value>"
 		 */
-		return message.split(",");
+		return message.split(",", limit);
 
 	}
 	
