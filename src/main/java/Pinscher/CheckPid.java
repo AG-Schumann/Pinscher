@@ -67,7 +67,9 @@ public class CheckPid extends BaseWindowedBolt {
 				Double pid = these_tuples.get(i).getDoubleByField("pid");
 				if (pid < lower_threshold.get(j) || pid > upper_threshold.get(j)) {
 					recurrence += 1;
-					if (recurrence >= max_recurrence) {
+                    // if more than maximum allowed consecutive values or ALL values in the buffer
+                    // are outside alarm range, increase howBad by 1.
+					if (recurrence >= max_recurrence || i==0) {
 						howBad += 1.;
 						break;
 					}

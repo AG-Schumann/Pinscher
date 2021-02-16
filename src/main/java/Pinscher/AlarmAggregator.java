@@ -44,7 +44,7 @@ public class AlarmAggregator extends BaseWindowedBolt {
 		// aggregation
 		List<String> aggregated_readings = new ArrayList<String>();
 		for (Document aggregation : aggregations) {
-			List<String> names = (List<String>) aggregation.get("alarms");
+			List<String> names = (List<String>) aggregation.get("names");
 			for (String name : names) {
 				if (!aggregated_readings.contains(name)) {
 					aggregated_readings.add(name);

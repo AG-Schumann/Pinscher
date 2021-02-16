@@ -67,7 +67,9 @@ public class CheckSimple extends BaseWindowedBolt {
 				Double value = these_tuples.get(i).getDoubleByField("value");
 				if (value < lower_threshold.get(j) || value > upper_threshold.get(j)) {
 					recurrence += 1;
-					if (recurrence >= max_recurrence) {
+                    // if more than maximum allowed consecutive values or ALL values in the buffer 
+                    // are outside alarm range, increase howBad by 1.
+					if (recurrence >= max_recurrence || i==0) {
 						howBad += 1.;
 						break;
 					}

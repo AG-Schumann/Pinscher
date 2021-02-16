@@ -71,7 +71,7 @@ public class Topology {
 		tp.setBolt("DiffBolt", new DifferentiatorBolt()
 				.withWindow(new Duration(window_length, TimeUnit.SECONDS), Count.of(1)))
 				.fieldsGrouping("IntBolt", new Fields("host", "reading_name"));
-		tp.setBolt("CheckPid", new CheckPid().withWindow(Count.of(max_recurrence), Count.of(1)))
+		tp.setBolt("CheckPid", new CheckPid().withWindow(new Duration(window_length, TimeUnit.SECONDS), Count.of(1)))
 				.fieldsGrouping("DiffBolt", new Fields("reading_name"));
 
 		// Time Since alarm
@@ -84,7 +84,7 @@ public class Topology {
 
 		// Simple alarm
 		tp.setBolt("SimpleConfig", new SimpleConfig(), 1).shuffleGrouping("ReadingAggregator");
-		tp.setBolt("CheckSimple", new CheckSimple().withWindow(Count.of(max_recurrence), Count.of(1)))
+		tp.setBolt("CheckSimple", new CheckSimple().withWindow(new Duration(window_length, TimeUnit.SECONDS), Count.of(1)))
 				.fieldsGrouping("SimpleConfig", new Fields("reading_name"));
 
 		tp.setBolt("AlarmAggregator",
