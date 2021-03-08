@@ -13,12 +13,13 @@ Pinscher is an open source software based on Apache Storm that can be used as pa
 ## Installation ##
 
 Installation guide tested for Ubuntu 18.04 LTS
-0. If you plan on using Pinscher together with Doberman, follow Doberman's installation guide (https://github.com/AG-Schumann/Doberman) first. Then, you can skip the following two steps and continue with step 3.
-1. Install and create a MongoDB server (These steps are for a local database, it is also possible to separate Doberman and the database. Follow   https://docs.mongodb.com/manual/tutorial/install-mongodb-on-ubuntu/).
-2. Install and create a InfluxDB server (These steps are for a local database, it is also possible to separate Doberman and the database. Follow https://docs.influxdata.com/influxdb/v1.8/introduction/install/)
-3. Install Apache Kafka (A useful installation guide: https://www.digitalocean.com/community/tutorials/how-to-install-apache-kafka-on-ubuntu-18-04)
-4. Set up an Apache Storm 2.0.0 cluster (https://storm.apache.org/releases/2.0.0/Setting-up-a-Storm-cluster.html)
-5. Setup the configuration database for the experiment (to be added)
-6. Download the pinscher.jar file
-7. Submit the topology for the specific experiment: 
+
+1. If you plan on using Pinscher together with Doberman, follow Doberman's installation guide (https://github.com/AG-Schumann/Doberman) first. Then, you can skip the following two steps and continue with step 4.
+2. Install and create a MongoDB server (These steps are for a local database, it is also possible to separate Doberman and the database. Follow   https://docs.mongodb.com/manual/tutorial/install-mongodb-on-ubuntu/).
+3. Install and create a InfluxDB server (These steps are for a local database, it is also possible to separate Doberman and the database. Follow https://docs.influxdata.com/influxdb/v1.8/introduction/install/)
+4. Install Apache Kafka (A useful installation guide: https://www.digitalocean.com/community/tutorials/how-to-install-apache-kafka-on-ubuntu-18-04)
+5. Set up an Apache Storm 2.0.0 cluster (https://storm.apache.org/releases/2.0.0/Setting-up-a-Storm-cluster.html)
+6. Setup the configuration database for the experiment (to be added)
+7. Download the pinscher.jar file
+8. Submit the topology for the specific experiment: 
 `$STORM_PATH/bin/storm jar pinscher.jar <MONGO_URI> <EXPERIMENT_NAME>`
