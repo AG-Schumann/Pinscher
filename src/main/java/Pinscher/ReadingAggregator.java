@@ -61,7 +61,8 @@ public class ReadingAggregator extends BaseWindowedBolt {
 			// refresh config file every second
 			long current_time = System.currentTimeMillis();
 			if (current_time - last_update >= 1000) {
-				combined = config_db.readOne("settings", "sensors", eq("name", "storm"));
+                String storm_name = "storm_" + experiment_name;
+				combined = config_db.readOne("settings", "sensors", eq("name", storm_name));
 				last_update = current_time;
 			}
 
